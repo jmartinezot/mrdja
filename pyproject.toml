@@ -20,3 +20,6 @@ classifiers = [
 [project.urls]
 "Homepage" = "https://github.com/pypa/mrdja"
 "Bug Tracker" = "https://github.com/pypa/mrdja/issues"
+
+[tool.poetry.dependencies]
+sphinx-automodapi = "*"
