@@ -1,1 +1,4 @@
 dist
+build
+api
+__pycache__
