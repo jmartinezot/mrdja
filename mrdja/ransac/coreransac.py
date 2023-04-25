@@ -44,7 +44,9 @@ import open3d as o3d
 import math
 import coreransacutils as crsu
 from typing import Optional, List, Tuple, Dict, Union
-import mrdja.geometry as geom
+import sys
+sys.path.append('../geometry')
+import geometry as geom
 
 def get_np_array_of_three_random_points_from_np_array_of_points(points: np.ndarray, num_points: Optional[int] = None) -> np.ndarray:
     """
