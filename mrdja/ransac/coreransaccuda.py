@@ -1,13 +1,39 @@
 from numba import cuda
 import math
 import coreransac as crs
+import mrdja.geometry as geom
 import coreransacutils as crsu
 import numpy as np
 import numba
 from time import time
+from typing import Tuple, List
 
 @cuda.jit
-def get_how_many_below_threshold_kernel(points_x, points_y, points_z, a, b, c, d, optimized_threshold, point_indices):
+def get_how_many_below_threshold_kernel(points_x: np.ndarray, points_y: np.ndarray, points_z: np.ndarray,
+                                         a: float, b: float, c: float, d: float,
+                                         optimized_threshold: float, point_indices: np.ndarray) -> None:
+    """
+    Computes the number of points that are below a threshold distance from a plane using CUDA parallel processing.
+    
+    :param points_x: The x-coordinates of the points.
+    :type points_x: np.ndarray
+    :param points_y: The y-coordinates of the points.
+    :type points_y: np.ndarray
+    :param points_z: The z-coordinates of the points.
+    :type points_z: np.ndarray
+    :param a: The first coefficient of the plane equation.
+    :type a: float
+    :param b: The second coefficient of the plane equation.
+    :type b: float
+    :param c: The third coefficient of the plane equation.
+    :type c: float
+    :param d: The fourth coefficient of the plane equation.
+    :type d: float
+    :param optimized_threshold: The threshold distance from the plane.
+    :type optimized_threshold: float
+    :param point_indices: The array of indices representing the points that are below the threshold.
+    :type point_indices: np.ndarray
+    """
     i = cuda.grid(1)
     if i < points_x.shape[0]:
         dist = math.fabs(a * points_x[i] + b * points_y[i] + c * points_z[i] + d)
@@ -44,7 +70,34 @@ def get_how_many_below_threshold_kernel(points_x, points_y, points_z, a, b, c, d
             point_indices[i] = 1
 '''
 
-def get_how_many_below_threshold_between_plane_and_points_and_their_indices_cuda(points, points_x, points_y, points_z, d_points_x, d_points_y, d_points_z, plane, threshold):
+def get_how_many_below_threshold_between_plane_and_points_and_their_indices_cuda(
+    points: np.ndarray, points_x: np.ndarray, points_y: np.ndarray, points_z: np.ndarray,
+    d_points_x: np.ndarray, d_points_y: np.ndarray, d_points_z: np.ndarray, 
+    plane: Tuple[float, float, float, float], threshold: float) -> Tuple[int, List[int]]:
+    """
+    Computes the number of points that are below a threshold distance from a plane and their indices using CUDA parallel processing.
+    
+    :param points: The array of points in the format (x, y, z).
+    :type points: np.ndarray
+    :param points_x: The x-coordinates of the points.
+    :type points_x: np.ndarray
+    :param points_y: The y-coordinates of the points.
+    :type points_y: np.ndarray
+    :param points_z: The z-coordinates of the points.
+    :type points_z: np.ndarray
+    :param d_points_x: The x-coordinates of the points in device memory.
+    :type d_points_x: np.ndarray
+    :param d_points_y: The y-coordinates of the points in device memory.
+    :type d_points_y: np.ndarray
+    :param d_points_z: The z-coordinates of the points in device memory.
+    :type d_points_z: np.ndarray
+    :param plane: The coefficients of the plane equation.
+    :type plane: Tuple[float, float, float, float]
+    :param threshold: The threshold distance from the plane.
+    :type threshold: float
+    :return: The number of points below the threshold and their indices.
+    :rtype: Tuple[int, List[int]]
+    """
     t1 = time()
     a = plane[0]
     b = plane[1]
@@ -75,12 +128,44 @@ def get_how_many_below_threshold_between_plane_and_points_and_their_indices_cuda
     print(f't4 - t3: {(t4-t3):.4f}s')
     return count, new_indices
 
-def get_ransac_iteration_results_cuda(points, points_x, points_y, points_z, d_points_x, d_points_y, d_points_z, num_points, threshold):
+def get_ransac_iteration_results_cuda(points: np.ndarray, 
+                                       points_x: np.ndarray, 
+                                       points_y: np.ndarray, 
+                                       points_z: np.ndarray, 
+                                       d_points_x: cuda.devicearray.DeviceNDArray, 
+                                       d_points_y: cuda.devicearray.DeviceNDArray, 
+                                       d_points_z: cuda.devicearray.DeviceNDArray, 
+                                       num_points: int, 
+                                       threshold: float) -> dict:
+    """
+    Computes the number of inliers and the plane parameters for one iteration of the RANSAC algorithm using CUDA.
+
+    :param points: Array of points.
+    :type points: np.ndarray
+    :param points_x: X coordinates of the points.
+    :type points_x: np.ndarray
+    :param points_y: Y coordinates of the points.
+    :type points_y: np.ndarray
+    :param points_z: Z coordinates of the points.
+    :type points_z: np.ndarray
+    :param d_points_x: Device array of X coordinates of the points.
+    :type d_points_x: cuda.devicearray.DeviceNDArray
+    :param d_points_y: Device array of Y coordinates of the points.
+    :type d_points_y: cuda.devicearray.DeviceNDArray
+    :param d_points_z: Device array of Z coordinates of the points.
+    :type d_points_z: cuda.devicearray.DeviceNDArray
+    :param num_points: Number of random points to select for each iteration.
+    :type num_points: int
+    :param threshold: Maximum distance to the plane.
+    :type threshold: float
+    :return: Dictionary with the plane parameters, the number of inliers, and the indices of the inliers.
+    :rtype: dict
+    """
     t1 = time()
     # esto es lo que tarda mucho
     current_random_points = crs.get_np_array_of_three_random_points_from_np_array_of_points(points, num_points)
     t2 = time()
-    current_plane = crs.get_plane_from_list_of_three_points(current_random_points.tolist())
+    current_plane = geom.get_plane_from_list_of_three_points(current_random_points.tolist())
     t3 = time()
     print(f't2 - t1: {(t2-t1):.4f}s')
     print(f't3 - t2: {(t3-t2):.4f}s')
@@ -93,24 +178,20 @@ def get_ransac_results_cuda(points, num_points, threshold, num_iterations):
     """
     Computes the best plane that fits a collection of points and the indices of the inliers.
     
-    :param points_x: X coordinates of the points.
-    :type points_x: np.ndarray
-    :param points_y: Y coordinates of the points.
-    :type points_y: np.ndarray
-    :param points_z: Z coordinates of the points.
-    :type points_z: np.ndarray
+    :param points: 3D coordinates of the points as a numpy array with shape (num_points, 3).
+    :type points: np.ndarray
+    :param num_points: Number of points to use for RANSAC.
+    :type num_points: int
     :param threshold: Maximum distance to the plane.
-    :type threshold: np.float32
+    :type threshold: float
     :param num_iterations: Number of iterations to compute the best plane.
-    :type num_iterations: np.int64
-    :param random_points_indices_1: Indices of the points to use as first random point in each iteration.
-    :type random_points_indices_1: np.ndarray
-    :param random_points_indices_2: Indices of the points to use as second random point in each iteration.
-    :type random_points_indices_2: np.ndarray
-    :param random_points_indices_3: Indices of the points to use as third random point in each iteration.
-    :type random_points_indices_3: np.ndarray
-    :return: Best plane parameters and the indices of the points that fit the plane.
-    :rtype: Tuple[np.ndarray, np.ndarray]
+    :type num_iterations: int
+    :return: A dictionary with keys "best_plane", "number_inliers", and "indices_inliers".
+             "best_plane" is a numpy array with shape (4,) representing the best-fit plane in the form of [a, b, c, d],
+             where the equation of the plane is ax + by + cz + d = 0.
+             "number_inliers" is an int representing the number of inliers that fit the best-fit plane.
+             "indices_inliers" is a numpy array with shape (num_inliers,) representing the indices of the inliers.
+    :rtype: dict
 
     :Example:
 

@@ -40,10 +40,13 @@ o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
 '''
 
 import numpy as np
+import open3d as o3d
 import math
 import coreransacutils as crsu
+from typing import Optional, List, Tuple, Dict, Union
+import mrdja.geometry as geom
 
-def get_np_array_of_three_random_points_from_np_array_of_points(points, num_points=None):
+def get_np_array_of_three_random_points_from_np_array_of_points(points: np.ndarray, num_points: Optional[int] = None) -> np.ndarray:
     """
     Returns three random points from a list of points.
 
@@ -75,38 +78,7 @@ def get_np_array_of_three_random_points_from_np_array_of_points(points, num_poin
     random_points = points[random_points_indices]
     return random_points
 
-def get_plane_from_list_of_three_points(points):
-    """
-    Get plane in form Ax + By + Cz + D = 0 from list of three points.
-    
-    TO DO: CHECK IF POINTS ARE NOT COLLINEAR
-    
-    :param points: Points.
-    :type points: np.ndarray
-    :return: Plane.
-    :rtype: np.ndarray
-
-    :Example:
-
-    ::
-
-        >>> import coreransac
-        >>> points = [[0, 0, 0], [1, 0, 0], [0, 1, 0]]
-        >>> plane = customransac.get_plane_from_points(points)
-        >>> plane
-        array([0, 0, 1, 0])
-    """
-    p1 = np.array(points[0])
-    p2 = np.array(points[1])
-    p3 = np.array(points[2])
-    v1 = p2 - p1
-    v2 = p3 - p1
-    normal = np.cross(v1, v2)
-    d = -np.dot(normal, p1)
-    A, B, C = normal
-    return np.array([A, B, C, d])
-
-def get_how_many_below_threshold_between_plane_and_points_and_their_indices(points, plane, threshold):
+def get_how_many_below_threshold_between_plane_and_points_and_their_indices(points: np.ndarray, plane: np.ndarray, threshold: np.float32) -> Tuple[int, np.ndarray]:
     """
     Computes how many points are below a threshold distance from a plane and returns their count and their indices.
 
@@ -162,7 +134,7 @@ def get_how_many_below_threshold_between_plane_and_points_and_their_indices(poin
     indices_inliers = np.array([index for index, value in enumerate(distance) if value <= optimized_threshold], dtype=np.int64)
     return len(indices_inliers), indices_inliers
 
-def get_pointcloud_from_indices(pcd, indices):
+def get_pointcloud_from_indices(pcd: o3d.geometry.PointCloud, indices: np.ndarray) -> o3d.geometry.PointCloud:
     """
     Get a point cloud from a list of indices.
     
@@ -188,15 +160,27 @@ def get_pointcloud_from_indices(pcd, indices):
     pcd = pcd.select_by_index(indices)
     return pcd
 
-def get_ransac_iteration_results(points, num_points, threshold):
+def get_ransac_iteration_results(points: np.ndarray, num_points: int, threshold: float) -> dict:
+    """
+    Returns the results of one iteration of the RANSAC algorithm for plane fitting.
+    
+    :param points: The collection of points to fit the plane to.
+    :type points: np.ndarray
+    :param num_points: The number of points to randomly select to fit the plane in this iteration.
+    :type num_points: int
+    :param threshold: The maximum distance from a point to the plane for it to be considered an inlier.
+    :type threshold: float
+    :return: A dictionary containing the current plane parameters, number of inliers, and their indices.
+    :rtype: dict
+    """
     current_random_points = get_np_array_of_three_random_points_from_np_array_of_points(points, num_points)
-    current_plane = get_plane_from_list_of_three_points(current_random_points.tolist())
+    current_plane = geom.get_plane_from_list_of_three_points(current_random_points.tolist())
     how_many_in_plane, current_point_indices = get_how_many_below_threshold_between_plane_and_points_and_their_indices(points, current_plane, threshold)
     print(num_points, current_random_points, current_plane, how_many_in_plane)
     return {"current_plane": current_plane, "number_inliers": how_many_in_plane, "indices_inliers": current_point_indices}
     
 
-def get_ransac_results(points, num_points, threshold, num_iterations):
+def get_ransac_results(points: np.ndarray, num_points: int, threshold: float, num_iterations: int) -> dict:
     """
     Computes the best plane that fits a collection of points and the indices of the inliers.
     

@@ -13,6 +13,9 @@ Welcome to mrdja's documentation!
 .. automodapi:: sampling
 
 .. automodapi:: ransac
+.. automodapi:: coreransac
+.. automodapi:: coreransaccuda
+.. automodapi:: coreransacutils
 
 .. highlight:: python
 
