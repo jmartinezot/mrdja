@@ -12,6 +12,8 @@ Welcome to mrdja's documentation!
 
 .. automodapi:: sampling
 
+.. automodapi:: ransac
+
 .. highlight:: python
 
 Indices and tables

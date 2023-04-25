@@ -15,6 +15,8 @@ import sphinx_rtd_theme
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../mrdja/sampling'))
+sys.path.insert(0, os.path.abspath('../../mrdja/ransac'))
+
 
 
 # -- Project information -----------------------------------------------------
