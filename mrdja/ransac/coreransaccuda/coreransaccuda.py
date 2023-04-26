@@ -1,14 +1,13 @@
 from numba import cuda
 import math
-import coreransac as crs
-import coreransacutils as crsu
+import mrdja.ransac.coreransac as crs
+import mrdja.ransac.coreransacutils as crsu
 import numpy as np
 import numba
 from time import time
 from typing import Tuple, List
 import sys
-sys.path.append('../geometry')
-import geometry as geom
+import mrdja.geometry as geom
 
 @cuda.jit
 def get_how_many_below_threshold_kernel(points_x: np.ndarray, points_y: np.ndarray, points_z: np.ndarray,

@@ -42,11 +42,9 @@ o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
 import numpy as np
 import open3d as o3d
 import math
-import coreransacutils as crsu
+import mrdja.ransac.coreransacutils as crsu
 from typing import Optional, List, Tuple, Dict, Union
-import sys
-sys.path.append('../geometry')
-import geometry as geom
+import mrdja.geometry as geom
 
 def get_np_array_of_three_random_points_from_np_array_of_points(points: np.ndarray, num_points: Optional[int] = None) -> np.ndarray:
     """

@@ -1,6 +1,6 @@
 import open3d as o3d
-import coreransac
-import coreransaccuda
+import mrdja.ransac.coreransac as coreransac
+import mrdja.ransac.coreransaccuda as coreransaccuda
 import random
 import numpy as np
 from typing import Tuple
