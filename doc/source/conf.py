@@ -17,6 +17,7 @@ import sys
 sys.path.insert(0, os.path.abspath('../../mrdja/sampling'))
 sys.path.insert(0, os.path.abspath('../../mrdja/ransac'))
 sys.path.insert(0, os.path.abspath('../../mrdja/geometry'))
+sys.path.insert(0, os.path.abspath('../../mrdja/procrustes'))
 
 # -- Project information -----------------------------------------------------
 

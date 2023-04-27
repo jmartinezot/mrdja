@@ -17,6 +17,8 @@ Welcome to mrdja's documentation!
 .. automodapi:: coreransaccuda
 .. automodapi:: coreransacutils
 
+.. automodapi:: procrustes
+
 .. highlight:: python
 
 Indices and tables
