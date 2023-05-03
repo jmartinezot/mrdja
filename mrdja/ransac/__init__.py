@@ -1,1 +1,1 @@
-from .ransac import o3d_plane_finder, ransac_from_scratch_plane_finder, cuda_plane_finder
+from .ransac import o3d_plane_finder, ransac_from_scratch_plane_finder, cuda_plane_finder, find_multiple_planes, color_multiple_planes

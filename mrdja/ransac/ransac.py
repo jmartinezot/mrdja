@@ -3,10 +3,10 @@ import mrdja.ransac.coreransac as coreransac
 import mrdja.ransac.coreransaccuda as coreransaccuda
 import random
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Dict, Union
 
 def o3d_plane_finder(pcd: o3d.geometry.PointCloud, distance_threshold: float, 
-                          num_iterations: int) -> Tuple[np.ndarray, o3d.geometry.PointCloud, o3d.geometry.PointCloud]:
+                          num_iterations: int) -> Dict[str, Union[np.ndarray, o3d.geometry.PointCloud]]:
     """
     Uses Open3D to find the best plane that fits a point cloud using RANSAC algorithm.
 
@@ -24,13 +24,11 @@ def o3d_plane_finder(pcd: o3d.geometry.PointCloud, distance_threshold: float,
     # print("Plane equation: {}x + {}y + {}z + {} = 0".format(a, b, c, d))
     inlier_cloud = pcd.select_by_index(inliers)
     outlier_cloud = pcd.select_by_index(inliers, invert=True)
-    return plane_model, inlier_cloud, outlier_cloud
+    return {"plane_model": plane_model, "inlier_cloud": inlier_cloud, "outlier_cloud": outlier_cloud}
 
 def ransac_from_scratch_plane_finder(pcd: o3d.geometry.PointCloud, 
                                       distance_threshold: float, 
-                                      num_iterations: int) -> Tuple[np.ndarray, 
-                                                                   o3d.geometry.PointCloud, 
-                                                                   o3d.geometry.PointCloud]:
+                                      num_iterations: int) -> Dict[str, Union[np.ndarray, o3d.geometry.PointCloud]]:
     """
     Computes the best plane that fits a collection of points and the indices of the inliers.
     
@@ -45,29 +43,17 @@ def ransac_from_scratch_plane_finder(pcd: o3d.geometry.PointCloud,
     """
     num_points = len(pcd.points)
     pcd_points = np.asarray(pcd.points, dtype="float32") 
-    pcd_colors = np.asarray(pcd.colors, dtype="float32")
     dict_results = coreransac.get_ransac_results(pcd_points, num_points, distance_threshold, num_iterations)
-    best_model = dict_results["best_plane"]
-    best_inlier_indices = dict_results["indices_inliers"]
-    # best_inlier_count = dict_results["number_inliers"] 
-    best_inlier_cloud_points = pcd_points[best_inlier_indices]
-    # fill best_outlier_cloud_points with the points that are not inliers
-    best_outlier_indices = np.setdiff1d(np.arange(num_points), best_inlier_indices)
-    best_outlier_cloud_points = pcd_points[best_outlier_indices]
-    best_inlier_cloud_colors = pcd_colors[best_inlier_indices]
-    best_outlier_cloud_colors = pcd_colors[best_outlier_indices]
-    best_inlier_cloud = o3d.geometry.PointCloud()
-    best_inlier_cloud.points = o3d.utility.Vector3dVector(best_inlier_cloud_points)
-    best_inlier_cloud.colors = o3d.utility.Vector3dVector(best_inlier_cloud_colors)
-    best_outlier_cloud = o3d.geometry.PointCloud()
-    best_outlier_cloud.points = o3d.utility.Vector3dVector(best_outlier_cloud_points)
-    best_outlier_cloud.colors = o3d.utility.Vector3dVector(best_outlier_cloud_colors)
+    plane_model = dict_results["best_plane"]
+    best_inlier_indices = dict_results["indices_inliers"]   
+    inlier_cloud = pcd.select_by_index(best_inlier_indices)
+    outlier_cloud = pcd.select_by_index(best_inlier_indices, invert=True)
             
-    return best_model, best_inlier_cloud, best_outlier_cloud
+    return {"plane_model": plane_model, "inlier_cloud": inlier_cloud, "outlier_cloud": outlier_cloud}
 
 def cuda_plane_finder(pcd: o3d.geometry.PointCloud, 
                       distance_threshold: np.float32, 
-                      num_iterations: np.int64) -> Tuple[np.ndarray, o3d.geometry.PointCloud, o3d.geometry.PointCloud]:
+                      num_iterations: np.int64) -> Dict[str, Union[np.ndarray, o3d.geometry.PointCloud]]:
     """
     Computes the best plane that fits a point cloud and the indices of the inliers using GPU acceleration.
     
@@ -81,23 +67,34 @@ def cuda_plane_finder(pcd: o3d.geometry.PointCloud,
     :rtype: Tuple[np.ndarray, o3d.geometry.PointCloud, o3d.geometry.PointCloud]
     """
     num_points = len(pcd.points)
+    if num_points == 0:
+        raise ValueError("Input point cloud is empty")   
     pcd_points = np.asarray(pcd.points, dtype="float32") 
-    pcd_colors = np.asarray(pcd.colors, dtype="float32")
     dict_results = coreransaccuda.get_ransac_results_cuda(pcd_points, num_points, distance_threshold, num_iterations)
-    best_model = dict_results["best_plane"]
-    best_inlier_indices = dict_results["indices_inliers"]
-    # best_inlier_count = dict_results["number_inliers"] 
-    best_inlier_cloud_points = pcd_points[best_inlier_indices]
-    # fill best_outlier_cloud_points with the points that are not inliers
-    best_outlier_indices = np.setdiff1d(np.arange(num_points), best_inlier_indices)
-    best_outlier_cloud_points = pcd_points[best_outlier_indices]
-    best_inlier_cloud_colors = pcd_colors[best_inlier_indices]
-    best_outlier_cloud_colors = pcd_colors[best_outlier_indices]
-    best_inlier_cloud = o3d.geometry.PointCloud()
-    best_inlier_cloud.points = o3d.utility.Vector3dVector(best_inlier_cloud_points)
-    best_inlier_cloud.colors = o3d.utility.Vector3dVector(best_inlier_cloud_colors)
-    best_outlier_cloud = o3d.geometry.PointCloud()
-    best_outlier_cloud.points = o3d.utility.Vector3dVector(best_outlier_cloud_points)
-    best_outlier_cloud.colors = o3d.utility.Vector3dVector(best_outlier_cloud_colors)
+    plane_model = dict_results["best_plane"]
+    best_inlier_indices = dict_results["indices_inliers"]   
+    inlier_cloud = pcd.select_by_index(best_inlier_indices)
+    outlier_cloud = pcd.select_by_index(best_inlier_indices, invert=True)
             
-    return best_model, best_inlier_cloud, best_outlier_cloud
+    return {"plane_model": plane_model, "inlier_cloud": inlier_cloud, "outlier_cloud": outlier_cloud}
+
+def find_multiple_planes(pcd: o3d.geometry.PointCloud, distance_threshold: float, num_iterations: int, num_planes: int, finder_function) -> Dict[str, Union[np.ndarray, o3d.geometry.PointCloud]]:
+    planes = []
+    for _ in range(num_planes):
+        if len(pcd.points) < 3:
+            break
+        d = finder_function(pcd, distance_threshold, num_iterations)
+        planes.append(d)
+        pcd = d["outlier_cloud"]
+    return planes
+
+def color_multiple_planes(pcd: o3d.geometry.PointCloud, distance_threshold: float, num_iterations: int, num_planes: int, finder_function) -> o3d.geometry.PointCloud:
+    planes = find_multiple_planes(pcd, distance_threshold, num_iterations, num_planes, finder_function)
+    colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [1, 0, 1], [0, 1, 1]]
+    colored_pcd = o3d.geometry.PointCloud()
+    for i, plane in enumerate(planes):
+        color = colors[i % len(colors)]
+        plane["inlier_cloud"].paint_uniform_color(color)
+        colored_pcd += plane["inlier_cloud"]
+    colored_pcd += planes[-1]["outlier_cloud"]
+    return colored_pcd
