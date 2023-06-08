@@ -252,3 +252,5 @@ def get_ransac_results(points: np.ndarray, num_points: int, threshold: float, nu
             best_plane = current_plane
             indices_inliers = current_indices_inliers.copy()
     return {"best_plane": best_plane, "number_inliers": number_points_in_best_plane, "indices_inliers": indices_inliers}
+
+

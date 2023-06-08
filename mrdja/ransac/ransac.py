@@ -1,6 +1,7 @@
 import open3d as o3d
 import mrdja.ransac.coreransac as coreransac
 import mrdja.ransac.coreransaccuda as coreransaccuda
+import mrdja.geometry as geometry
 import random
 import numpy as np
 from typing import Tuple, Dict, Union
@@ -98,3 +99,76 @@ def color_multiple_planes(pcd: o3d.geometry.PointCloud, distance_threshold: floa
         colored_pcd += plane["inlier_cloud"]
     colored_pcd += planes[-1]["outlier_cloud"]
     return colored_pcd
+
+def get_plane_distances_to_points(plane: np.ndarray, points: np.ndarray) -> np.ndarray:
+    """
+    Computes the distances from a plane to a collection of points.
+
+    :param plane: Plane parameters.
+    :type plane: np.ndarray
+    :param points: Collection of points.
+    :type points: np.ndarray
+    :return: Distances from the plane to the points.
+    :rtype: np.ndarray
+
+    :Example:
+
+    ::
+
+        >>> import mrdja.ransac as ran
+        >>> import numpy as np
+        >>> points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype="float32")
+        >>> plane = np.array([0, 0, 1, 0], dtype="float32")
+        >>> ran.get_plane_distances_to_points(plane, points)
+        array([ 0.,  0.,  0.], dtype=float32)
+    """
+    '''
+    if it is a list convert it to numpy array, and check if it is empty
+    '''
+    if isinstance(points, list):
+        points = np.asarray(points)
+    if len(points) == 0:
+        return np.array([], dtype="float32")
+    return np.abs(np.dot(points, plane[:3]) + plane[3]) / np.linalg.norm(plane[:3])
+
+def generate_k_planes_from_k_sets_of_3_random_points_of_pointcloud_points_and_compute_the_distance_from_the_planes_to_all_the_points(pcd: o3d.geometry.PointCloud, k: int) -> np.ndarray:
+    """
+    Generates k planes from k sets of 3 random points of point cloud points and computes the distance from the planes to all the points.
+
+    :param pcd: Point cloud data.
+    :type pcd: o3d.geometry.PointCloud
+    :param k: Number of planes to generate.
+    :type k: int
+    :return: Distances from the planes to the points.
+    :rtype: np.ndarray
+
+    :Example:
+
+    ::
+
+        >>> import mrdja.ransac as ran
+        >>> import numpy as np
+        >>> import open3d as o3d
+        >>> pcd = o3d.geometry.PointCloud()
+        >>> pcd.points = o3d.utility.Vector3dVector(np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 2, 3], [5, 6, 7]], dtype="float32"))
+        >>> ran.generate_k_planes_from_k_sets_of_3_random_points_of_pointcloud_points_and_compute_the_distance_from_the_planes_to_all_the_points(pcd, 3)
+    """
+    num_points = len(pcd.points)
+    pcd_points = np.asarray(pcd.points, dtype="float32")
+    points_to_compute_distance = np.empty((0, 3), dtype="float32")
+    all_planes = []
+    dict_distances = {}
+    for _ in range(k):
+        current_points = coreransac.get_np_array_of_three_random_points_from_np_array_of_points(pcd_points, num_points)
+        current_plane = geometry.get_plane_from_list_of_three_points(current_points)
+        get_plane_distances_to_points(current_plane, points_to_compute_distance)
+        dict_distances[tuple(current_plane)] = get_plane_distances_to_points(current_plane, points_to_compute_distance)
+        all_planes.append(current_plane)
+        for plane in all_planes:
+            previous_distances = dict_distances[tuple(plane)]
+            current_distances = get_plane_distances_to_points(plane, current_points)
+            all_distances = np.concatenate((previous_distances, current_distances))
+            # convert plane to tuple to use it as key in dictionary
+            dict_distances[tuple(plane)] = all_distances
+        points_to_compute_distance = np.concatenate((points_to_compute_distance, current_points))
+    return dict_distances
