@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Union
+from typing import List, Union, Tuple
 
 def get_plane_from_list_of_three_points(points: List[List[float]]) -> Union[np.ndarray, None]:
     """
@@ -32,3 +32,22 @@ def get_plane_from_list_of_three_points(points: List[List[float]]) -> Union[np.n
     d = -np.dot(normal, p1)
     A, B, C = normal
     return np.array([A, B, C, d])
+
+def get_limits_of_graph_from_limits_of_object(min_x: float, max_x: float, min_y: float, max_y: float) -> Tuple[float]:
+    """
+    Get limits of graph from limits of object. The (0,0) point should be in the center of the graph and the object should be whole visible. 
+    The visible zone should be square. This is useful for plotting.
+
+    :param min_x: Minimum x.
+    :type min_x: float
+    :param max_x: Maximum x.
+    :type max_x: float
+    :param min_y: Minimum y.
+    :type min_y: float
+    :param max_y: Maximum y.
+    :type max_y: float
+    :return: Limits of graph.
+    :rtype: float
+    """
+    limit = max(abs(min_x), abs(max_x), abs(min_y), abs(max_y))
+    return (-limit, limit, -limit, limit)

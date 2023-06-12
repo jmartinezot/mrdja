@@ -13,7 +13,7 @@ def set_random_seed(seed):
 
 def sample_point_circle_2d(center, radius=1):
     """
-    Generate a random point on a 2D circle with a specified radius and center.
+    Generate a random point on a 2D circle with a specified radius and center, using rejection sampling.
 
     :param center: tuple
         A tuple (x, y) representing the center of the circle.
@@ -39,7 +39,7 @@ def sample_point_circle_2d(center, radius=1):
         if (x - center[0])**2 + (y - center[1])**2 <= radius**2:
             return x, y
 
-def sampling_circle_2d(n_samples, center=(0,0), radius=1, seed=None):
+def sampling_circle_2d(n_samples=1, center=(0,0), radius=1, seed=None):
     """
     Generate random samples on a 2D circle with a specified radius and center.
 
@@ -138,8 +138,17 @@ def sample_point_parallelogram(a, b, c):
     y = a[1] + u * (b[1] - a[1]) + v * (c[1] - a[1])
     return x, y
 
-def sampling_parallelogram_2d(n_samples, a, b, c):
-    samples = [sample_point_parallelogram(a, b, c) for _ in range(n_samples)]
+def sampling_parallelogram_2d(n_samples, vertex1, vertex2, vertex3):
+    samples = [sample_point_parallelogram(vertex1, vertex2, vertex3) for _ in range(n_samples)]
+    return samples
+
+def sample_point_alligned_parallelogram(min_x, max_x, min_y, max_y):
+    x = random.uniform(min_x, max_x)
+    y = random.uniform(min_y, max_y)
+    return x, y
+
+def sampling_alligned_parallelogram_2d(n_samples, min_x, max_x, min_y, max_y):
+    samples = [sample_point_alligned_parallelogram(min_x, max_x, min_y, max_y) for _ in range(n_samples)]
     return samples
 
 def sample_point_cuboid(a, b, c, d, h):
