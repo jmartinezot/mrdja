@@ -1,1 +1,1 @@
-from .sampling import sampling_circle_2d, sampling_alligned_parallelogram_2d
+from .sampling import sampling_circle_2d, sampling_alligned_parallelogram_2d, sampling_parallelogram_2d, sampling_parallelogram_3d

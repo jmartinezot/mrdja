@@ -7,7 +7,7 @@ import matplotlib
 import numpy as np
 matplotlib.use('Agg')
 
-def plot_parallelogram(n_samples, min_x, max_x, min_y, max_y):
+def plot_alligned_parallelogram(n_samples, min_x, max_x, min_y, max_y):
     samples = sampling.sampling_alligned_parallelogram_2d(n_samples=n_samples, min_x=min_x, max_x=max_x, min_y=min_y, max_y=max_y)
     fig, ax = plt.subplots()
     ax.scatter(*zip(*samples))
@@ -20,7 +20,7 @@ def plot_parallelogram(n_samples, min_x, max_x, min_y, max_y):
     ax.set_xlim(graph_limits[0], graph_limits[1])  # Set x-axis limits
     ax.set_ylim(graph_limits[2], graph_limits[3])  # Set y-axis limits
     # create title from n_samples, center, and radius, using f-string
-    ax.set_title(f'{n_samples} Samples on a axes alligned Parallelogram with bottom left corner {min_x}, {min_y} and top right cornet {min_y}, {max_y}')
+    ax.set_title(f'{n_samples} Samples on a axes alligned Parallelogram with bottom left corner {min_x}, {min_y} and top right corner {max_x}, {max_y}')
     # draw also the parallelogram in red
     ax.plot([min_x, max_x], [min_y, min_y], color='r')
     ax.plot([min_x, max_x], [max_y, max_y], color='r')
@@ -53,7 +53,7 @@ outputs = [
 
 # Create the Gradio app
 app = gr.Interface(
-    fn=plot_parallelogram, 
+    fn=plot_alligned_parallelogram, 
     inputs=inputs, 
     outputs=outputs,
     title="Sampling 2D Alligned Parallelograms",

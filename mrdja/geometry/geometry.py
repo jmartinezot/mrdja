@@ -51,3 +51,85 @@ def get_limits_of_graph_from_limits_of_object(min_x: float, max_x: float, min_y:
     """
     limit = max(abs(min_x), abs(max_x), abs(min_y), abs(max_y))
     return (-limit, limit, -limit, limit)
+
+def get_limits_of_3d_graph_from_limits_of_object(min_x: float, max_x: float, min_y: float, max_y: float, min_z: float, max_z: float) -> Tuple[float]:
+    """
+    Get limits of graph from limits of object. The (0,0,0) point should be in the center of the graph and the object should be whole visible. 
+    The visible zone should be square. This is useful for plotting.
+
+    :param min_x: Minimum x.
+    :type min_x: float
+    :param max_x: Maximum x.
+    :type max_x: float
+    :param min_y: Minimum y.
+    :type min_y: float
+    :param max_y: Maximum y.
+    :type max_y: float
+    :param min_z: Minimum z.
+    :type min_z: float
+    :return: Limits of graph.
+    :rtype: float
+    """
+    limit = max(abs(min_x), abs(max_x), abs(min_y), abs(max_y), abs(min_z), abs(max_z))
+    return (-limit, limit, -limit, limit, -limit, limit)
+
+def get_parallelogram_2d_vertices(center: List[float], normal1: List[float], normal2: List[float], length1: float, length2: float):
+    '''
+    Get vertices of parallelogram, given center, normal vectors, and lengths.
+
+    :param center: Center.
+    :type center: List[float]
+    :param normal1: Normal vector 1.
+    :type normal1: List[float]
+    :param normal2: Normal vector 2.
+    :type normal2: List[float]
+    :param length1: Length 1.
+    :type length1: float
+    :param length2: Length 2.
+    :type length2: float
+    :return: Vertices.
+    :rtype: List[List[float]]
+
+    :Example:
+
+    ::
+    '''
+    vertex1 = center + normal1 * length1 / 2 + normal2 * length2 / 2
+    vertex2 = center - normal1 * length1 / 2 + normal2 * length2 / 2
+    vertex3 = center - normal1 * length1 / 2 - normal2 * length2 / 2
+    vertex4 = center + normal1 * length1 / 2 - normal2 * length2 / 2
+    return [vertex1, vertex2, vertex3, vertex4]
+
+def get_parallelogram_3d_vertices(center: List[float], normal1: List[float], normal2: List[float], normal3: List[float], length1: float, length2: float, length3: float):
+    '''
+    Get vertices of parallelogram, given center, normal vectors, and lengths.
+
+    :param center: Center.
+    :type center: List[float]
+    :param normal1: Normal vector 1.
+    :type normal1: List[float]
+    :param normal2: Normal vector 2.
+    :type normal2: List[float]
+    :param length1: Length 1.
+    :type length1: float
+    :param length2: Length 2.
+    :type length2: float
+    :param length3: Length 3.
+    :type length3: float
+    :return: Vertices.
+    :rtype: List[List[float]]
+
+    :Example:
+
+    ::
+    '''
+    vertex1 = center + normal1 * length1 / 2 + normal2 * length2 / 2 + normal3 * length3 / 2
+    vertex2 = center - normal1 * length1 / 2 + normal2 * length2 / 2 + normal3 * length3 / 2
+    vertex3 = center - normal1 * length1 / 2 - normal2 * length2 / 2 + normal3 * length3 / 2
+    vertex4 = center + normal1 * length1 / 2 - normal2 * length2 / 2 + normal3 * length3 / 2
+
+    vertex5 = center + normal1 * length1 / 2 + normal2 * length2 / 2 - normal3 * length3 / 2
+    vertex6 = center - normal1 * length1 / 2 + normal2 * length2 / 2 - normal3 * length3 / 2
+    vertex7 = center - normal1 * length1 / 2 - normal2 * length2 / 2 - normal3 * length3 / 2
+    vertex8 = center + normal1 * length1 / 2 - normal2 * length2 / 2 - normal3 * length3 / 2
+    return [vertex1, vertex2, vertex3, vertex4, vertex5, vertex6, vertex7, vertex8]
