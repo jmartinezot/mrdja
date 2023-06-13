@@ -38,6 +38,15 @@ for edge in edges:
     ax.plot([vertices[edge[0]][0], vertices[edge[1]][0]],
             [vertices[edge[0]][1], vertices[edge[1]][1]],
             [vertices[edge[0]][2], vertices[edge[1]][2]], color='red')
+    
+# Draw the normals at a quarter of their corresponding length
+quarter_length1 = length1 / 4
+quarter_length2 = length2 / 4
+arrow_length1 = quarter_length1 / 2
+arrow_length2 = quarter_length2 / 2
+ax.quiver(center[0], center[1], center[2], normal1[0], normal1[1], normal1[2], length=arrow_length1, normalize=False, color='red')
+ax.quiver(center[0], center[1], center[2], normal2[0], normal2[1], normal2[2], length=arrow_length2, normalize=False, color='red')
+ax.quiver(center[0], center[1], center[2], normal3[0], normal3[1], normal3[2], length=arrow_length2, normalize=False, color='red')
 
 ax.set_xlabel('X')
 ax.set_ylabel('Y')

@@ -112,8 +112,6 @@ def sampling_circle_2d(n_samples=1, center=(0,0), radius=1, seed=None):
 
     return samples
 
-
-
 def sample_point_circle_3d_rejection(radius=1, center=np.array([0, 0, 0]), normal=np.array([0, 0, 1])):
     normal = normal / np.linalg.norm(normal)
     
@@ -276,16 +274,94 @@ def sampling_cuboid(n_samples, a, b, c, d, h):
     samples = [sample_point_cuboid(a, b, c, d, h) for _ in range(n_samples)]
     return samples
 
-def sample_point_sphere(radius=1):
+def sample_point_sphere(center, radius=1):
+    """
+    Generate a random point on a sphere with a specified radius and center, using rejection sampling.
+
+    :param center: tuple
+        A tuple (x, y, z) representing the center of the circle.
+    :param radius: float, optional
+        The radius of the circle. Default is 1.
+    :return: tuple
+        A tuple (x, y, z) representing the coordinates of the sampled point.
+    """
     while True:
-        x = random.uniform(-radius, radius)
-        y = random.uniform(-radius, radius)
-        z = random.uniform(-radius, radius)
-        if x**2 + y**2 + z**2 <= radius**2:
+        # Generate a random point on the circle with radius 1 centered at (0,0)
+        x = random.uniform(-1, 1)
+        y = random.uniform(-1, 1)
+        z = random.uniform(-1, 1)
+        
+        # Scale the coordinates to the desired radius
+        x *= radius
+        y *= radius
+        z *= radius
+        
+        # Translate the point to the desired center
+        x += center[0]
+        y += center[1]
+        z += center[2]
+        
+        # Check if the point is within the circle
+        if (x - center[0])**2 + (y - center[1])**2 + (z - center[2])**2 <= radius**2:
             return x, y, z
 
-def sampling_sphere(n_samples, radius=1):
-    samples = [sample_point_sphere(radius) for _ in range(n_samples)]
+def sampling_sphere(n_samples=1, center=(0,0,0), radius=1, seed=None):
+    """
+    Generate random samples on a sphere with a specified radius and center.
+
+    :param n_samples: int
+        The number of random samples to generate on the circle.
+    :param center: tuple, optional
+        A tuple (x, y, z) representing the center of the circle. Default is (0,0).
+    :param radius: float, optional
+        The radius of the circle. Default is 1.
+    :param seed: int, optional
+        The seed value for the random number generator. Default is None.
+    :return: list of tuple
+        A list of tuples (x, y, z) representing the coordinates of the sampled points.
+        
+    .. note:: The samples are uniformly distributed on the sphere.
+    
+    Examples
+    --------
+    Generate 100 random samples on a sphere with center (2,3,1) and radius 5:
+    
+    >>> samples = sampling_circle_2d(100, center=(2,3,1), radius=5)
+    
+    Plot the samples:
+    
+    >>> import matplotlib.pyplot as plt
+    >>> fig, ax = plt.subplots()
+    >>> ax.scatter(*zip(*samples))
+    >>> ax.set_aspect('equal')
+    >>> ax.set_title('100 Samples on a Circle with Center (2,3) and Radius 5')
+    >>> ax.set_xlabel('X')
+    >>> ax.set_ylabel('Y')
+    >>> plt.show()
+    
+    .. image:: ../../../images/samples1.png
+    
+    Generate 10000 random samples on a circle with center (0,0) and radius 2:
+    
+    >>> samples = sampling_circle_2d(10000, radius=2)
+    """
+    # Set the random seed for reproducibility if provided
+    if seed is not None:
+        set_random_seed(seed)
+
+    # Generate the specified number of samples on the circle
+    samples = [sample_point_sphere(center, radius) for _ in range(n_samples)]
+
     return samples
 
+def sampling_np_array_points(points, num_points = 1, len_points=None):
+    if len_points is None:
+        len_points = len(points)
+    random_points_indices = np.random.choice(range(len_points), num_points, replace=False)
+    random_points = points[random_points_indices]
+    return random_points
 
+def sampling_pcd_points(pcd, num_points = 1):
+    points = np.asarray(pcd.points)
+    random_points = sampling_np_array_points(points, num_points)
+    return random_points

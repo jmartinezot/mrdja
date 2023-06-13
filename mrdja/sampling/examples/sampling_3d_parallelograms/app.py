@@ -1,3 +1,8 @@
+'''
+NOT WORKING!!!! ABANDONED TILL I FIND A GOOD WAY OF SHOWING 3D INTERACTIVE PLOTS IN GRADIO
+'''
+
+
 import gradio as gr
 import mrdja.sampling as sampling
 import mrdja.geometry as geometry

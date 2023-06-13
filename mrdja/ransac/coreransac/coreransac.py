@@ -160,7 +160,7 @@ def get_pointcloud_from_indices(pcd: o3d.geometry.PointCloud, indices: np.ndarra
     pcd = pcd.select_by_index(indices)
     return pcd
 
-def get_ransac_iteration_results(points: np.ndarray, num_points: int, threshold: float) -> dict:
+def get_ransac_iteration_results(points: np.ndarray, len_points: int, threshold: float) -> dict:
     """
     Returns the results of one iteration of the RANSAC algorithm for plane fitting.
     
@@ -173,10 +173,10 @@ def get_ransac_iteration_results(points: np.ndarray, num_points: int, threshold:
     :return: A dictionary containing the current plane parameters, number of inliers, and their indices.
     :rtype: dict
     """
-    current_random_points = get_np_array_of_three_random_points_from_np_array_of_points(points, num_points)
+    current_random_points = get_np_array_of_three_random_points_from_np_array_of_points(points, len_points)
     current_plane = geom.get_plane_from_list_of_three_points(current_random_points.tolist())
     how_many_in_plane, current_point_indices = get_how_many_below_threshold_between_plane_and_points_and_their_indices(points, current_plane, threshold)
-    print(num_points, current_random_points, current_plane, how_many_in_plane)
+    print(len_points, current_random_points, current_plane, how_many_in_plane)
     return {"current_plane": current_plane, "number_inliers": how_many_in_plane, "indices_inliers": current_point_indices}
     
 

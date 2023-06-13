@@ -1,5 +1,6 @@
 import numpy as np
 from typing import List, Union, Tuple
+from scipy.linalg import svd
 
 def get_plane_from_list_of_three_points(points: List[List[float]]) -> Union[np.ndarray, None]:
     """
@@ -133,3 +134,55 @@ def get_parallelogram_3d_vertices(center: List[float], normal1: List[float], nor
     vertex7 = center - normal1 * length1 / 2 - normal2 * length2 / 2 - normal3 * length3 / 2
     vertex8 = center + normal1 * length1 / 2 - normal2 * length2 / 2 - normal3 * length3 / 2
     return [vertex1, vertex2, vertex3, vertex4, vertex5, vertex6, vertex7, vertex8]
+
+def get_plane_equation(normal1, normal2, point):
+    # Normalize the vectors
+    normal1 = normal1 / np.linalg.norm(normal1)
+    normal2 = normal2 / np.linalg.norm(normal2)
+
+    # Calculate the normal vector of the plane
+    normal = np.cross(normal1, normal2)
+    normal = normal / np.linalg.norm(normal)
+
+    # Calculate the value of D
+    D = -np.dot(normal, point)
+
+    # Multiply all coefficients by the reciprocal of D
+    A, B, C = normal
+
+    # Return the plane equation coefficients
+    return A, B, C, D
+
+def find_closest_plane(points: List[List[float]]) -> Tuple[float]:
+    """
+    Find the closest plane to a set of points based on Euclidean distance.
+
+    :param points: Points.
+    :type points: List[List[float]]
+    :return: Plane equation coefficients.
+    :rtype: Tuple[float]
+    """
+    # Center the points around the origin
+    centroid = np.mean(points, axis=0)
+    centered_points = points - centroid
+
+    # Compute the singular value decomposition
+    _, _, vh = svd(centered_points)
+
+    # Extract the last row of V^T to get the normal vector of the plane
+    plane_normal = vh[-1]
+
+    # Normalize the normal vector
+    plane_normal /= np.linalg.norm(plane_normal)
+
+    # Choose a point on the plane as the centroid of the centered points
+    plane_point = centroid
+
+    # Compute the D coefficient of the plane equation
+    D = -np.dot(plane_normal, plane_point)
+
+    # Return the plane equation coefficients
+    return (*plane_normal, D)
+
+
+
