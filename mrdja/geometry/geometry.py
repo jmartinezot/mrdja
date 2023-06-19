@@ -105,7 +105,8 @@ def get_parallelogram_2d_vertices(center: List[float], normal1: List[float], nor
     vertex4 = center + normal1 * length1 / 2 - normal2 * length2 / 2
     return [vertex1, vertex2, vertex3, vertex4]
 
-def get_parallelogram_3d_vertices(center: List[float], normal1: List[float], normal2: List[float], normal3: List[float], length1: float, length2: float, length3: float):
+def get_parallelogram_3d_vertices(center: List[float], normal1: List[float], normal2: List[float], normal3: List[float], 
+                                  length1: float, length2: float, length3: float)-> List[List[float]]:
     '''
     Get vertices of parallelogram, given center, normal vectors, and lengths.
 

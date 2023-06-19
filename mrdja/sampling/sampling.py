@@ -312,7 +312,7 @@ def sample_point_alligned_parallelogram_2d(min_x: float, max_x: float, min_y: fl
     return x, y
 
 def sampling_alligned_parallelogram_2d(n_samples: int, min_x: float, max_x: float, min_y: float, max_y: float, 
-                                       seed: Optional[int] = None) -> list[Tuple[float, float]]:
+                                       seed: Optional[int] = None) -> List[Tuple[float, float]]:
     '''
     Sample points from a parallelogram with sides parallel to the x and y axes.
 
@@ -663,7 +663,8 @@ def sampling_sphere(n_samples:int=1, center:Tuple[float, float, float]=(0,0,0), 
 
     return samples
 
-def sampling_np_array_elements(elements:np.ndarray, num_samplings: int = 1, replacement: bool=False, len_elements: Optional[int]=None, seed: Optional[int]=None):
+def sampling_np_array_elements(elements:np.ndarray, num_samplings: int = 1, replacement: bool=False, 
+                               len_elements: Optional[int]=None, seed: Optional[int]=None) -> np.ndarray:
     """
     Sample elements from a numpy array.
 
