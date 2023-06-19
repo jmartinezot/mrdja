@@ -34,7 +34,7 @@ def get_plane_from_list_of_three_points(points: List[List[float]]) -> Union[np.n
     A, B, C = normal
     return np.array([A, B, C, d])
 
-def get_limits_of_graph_from_limits_of_object(min_x: float, max_x: float, min_y: float, max_y: float) -> Tuple[float]:
+def get_limits_of_graph_from_limits_of_object(min_x: float, max_x: float, min_y: float, max_y: float) -> Tuple[float, float, float, float]:
     """
     Get limits of graph from limits of object. The (0,0) point should be in the center of the graph and the object should be whole visible. 
     The visible zone should be square. This is useful for plotting.
@@ -48,12 +48,13 @@ def get_limits_of_graph_from_limits_of_object(min_x: float, max_x: float, min_y:
     :param max_y: Maximum y.
     :type max_y: float
     :return: Limits of graph.
-    :rtype: float
+    :rtype: Tuple[float, float, float, float]
     """
     limit = max(abs(min_x), abs(max_x), abs(min_y), abs(max_y))
     return (-limit, limit, -limit, limit)
 
-def get_limits_of_3d_graph_from_limits_of_object(min_x: float, max_x: float, min_y: float, max_y: float, min_z: float, max_z: float) -> Tuple[float]:
+def get_limits_of_3d_graph_from_limits_of_object(min_x: float, max_x: float, min_y: float, max_y: float, min_z: float, max_z: float) -> \
+                                                Tuple[float, float, float, float, float, float]:
     """
     Get limits of graph from limits of object. The (0,0,0) point should be in the center of the graph and the object should be whole visible. 
     The visible zone should be square. This is useful for plotting.
@@ -69,7 +70,7 @@ def get_limits_of_3d_graph_from_limits_of_object(min_x: float, max_x: float, min
     :param min_z: Minimum z.
     :type min_z: float
     :return: Limits of graph.
-    :rtype: float
+    :rtype: Tuple[float, float, float, float, float, float]
     """
     limit = max(abs(min_x), abs(max_x), abs(min_y), abs(max_y), abs(min_z), abs(max_z))
     return (-limit, limit, -limit, limit, -limit, limit)
@@ -95,6 +96,9 @@ def get_parallelogram_2d_vertices(center: List[float], normal1: List[float], nor
 
     ::
     '''
+    center = np.array(center)
+    normal1 = np.array(normal1)
+    normal2 = np.array(normal2)
     vertex1 = center + normal1 * length1 / 2 + normal2 * length2 / 2
     vertex2 = center - normal1 * length1 / 2 + normal2 * length2 / 2
     vertex3 = center - normal1 * length1 / 2 - normal2 * length2 / 2
@@ -124,6 +128,10 @@ def get_parallelogram_3d_vertices(center: List[float], normal1: List[float], nor
 
     ::
     '''
+    center = np.array(center)
+    normal1 = np.array(normal1)
+    normal2 = np.array(normal2)
+    normal3 = np.array(normal3)
     vertex1 = center + normal1 * length1 / 2 + normal2 * length2 / 2 + normal3 * length3 / 2
     vertex2 = center - normal1 * length1 / 2 + normal2 * length2 / 2 + normal3 * length3 / 2
     vertex3 = center - normal1 * length1 / 2 - normal2 * length2 / 2 + normal3 * length3 / 2
@@ -136,6 +144,9 @@ def get_parallelogram_3d_vertices(center: List[float], normal1: List[float], nor
     return [vertex1, vertex2, vertex3, vertex4, vertex5, vertex6, vertex7, vertex8]
 
 def get_plane_equation(normal1, normal2, point):
+    normal1 = np.array(normal1)
+    normal2 = np.array(normal2)
+    point = np.array(point)
     # Normalize the vectors
     normal1 = normal1 / np.linalg.norm(normal1)
     normal2 = normal2 / np.linalg.norm(normal2)

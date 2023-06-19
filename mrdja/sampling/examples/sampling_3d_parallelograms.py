@@ -23,7 +23,6 @@ fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.scatter(samples[:, 0], samples[:, 1], samples[:, 2])
 
-
 # create title from n_samples, center, and radius, using fstring
 ax.set_title(f'{n_samples} Samples on a Parallelogram with normal vectors {normal1}, {normal2} and {normal3}, \
             center {center}, length1 {length1}, length2 {length2} and length3 {length3}')

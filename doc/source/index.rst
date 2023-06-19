@@ -11,7 +11,9 @@ Welcome to mrdja's documentation!
    :caption: Contents:
 
 .. automodapi:: sampling
-
+	:skip: sample_point_alligned_parallelogram_2d, sample_point_circle_2d, sample_point_circle_3d_rejection
+	:skip: sample_point_cuboid, sample_point_parallelogram_2d, sample_point_parallelogram_3d, sample_point_sphere
+	:skip: sampling_circle_3d_rejection, sampling_cuboid, set_random_seed
 .. automodapi:: ransac
 .. automodapi:: coreransac
 .. automodapi:: coreransaccuda
