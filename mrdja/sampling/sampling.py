@@ -283,7 +283,7 @@ def sampling_parallelogram_2d(n_samples: int, normal1: Tuple[float, float], norm
     samples = [sample_point_parallelogram_2d(normal1, normal2, center, length1, length2) for _ in range(n_samples)]
     return samples
 
-def sample_point_alligned_parallelogram_2d(min_x: float, max_x: float, min_y: float, max_y: float) -> tuple[float, float]:
+def sample_point_alligned_parallelogram_2d(min_x: float, max_x: float, min_y: float, max_y: float) -> Tuple[float, float]:
     '''
     Sample a point from a parallelogram with sides parallel to the x and y axes.
 
@@ -295,7 +295,7 @@ def sample_point_alligned_parallelogram_2d(min_x: float, max_x: float, min_y: fl
         The minimum y coordinate of the parallelogram.
     :param max_y: float
         The maximum y coordinate of the parallelogram.
-    :return: tuple[float, float]
+    :return: Tuple[float, float]
         A tuple (x, y) representing the coordinates of the sampled point.
 
     .. note:: The samples are uniformly distributed on the parallelogram.
