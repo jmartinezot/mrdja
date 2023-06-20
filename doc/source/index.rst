@@ -10,6 +10,9 @@ Welcome to mrdja's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+.. automodapi:: geometry
+	:skip: svd
+.. automodapi:: drawing
 .. automodapi:: sampling
 	:skip: sample_point_alligned_parallelogram_2d, sample_point_circle_2d, sample_point_circle_3d_rejection
 	:skip: sample_point_cuboid, sample_point_parallelogram_2d, sample_point_parallelogram_3d, sample_point_sphere
@@ -20,6 +23,7 @@ Welcome to mrdja's documentation!
 .. automodapi:: coreransacutils
 
 .. automodapi:: procrustes
+	:skip: BaseEstimator, ClassifierMixin
 
 .. highlight:: python
 

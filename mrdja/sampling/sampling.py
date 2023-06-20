@@ -759,7 +759,7 @@ def sampling_pcd_points(pcd: o3d.geometry.PointCloud, num_points: int = 1, seed:
 
     |sampling_pcd_points|
 
-    .. |sampling_pcd_points| image:: ../../../images/sampling_pcd_points.png
+    .. |sampling_pcd_points| image:: ../../_static/images/sampling_pcd_points.png
     """
 
     points = np.asarray(pcd.points)
