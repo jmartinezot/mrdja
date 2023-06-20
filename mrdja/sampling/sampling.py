@@ -114,7 +114,7 @@ def sampling_circle_2d(n_samples:int=1, center:Tuple[float, float]=(0,0), radius
 
     |sampling_circle_2d|
 
-    .. |sampling_circle_2d| image:: ../../../images/sampling_circle_2d.png
+    .. |sampling_circle_2d| image:: ../../_static/images/sampling_circle_2d.png
     """
     # Set the random seed for reproducibility if provided
     if seed is not None:
@@ -273,7 +273,7 @@ def sampling_parallelogram_2d(n_samples: int, normal1: Tuple[float, float], norm
 
     |sampling_parallelogram_2d|
 
-    .. |sampling_parallelogram_2d| image:: ../../../images/sampling_parallelogram_2d.png
+    .. |sampling_parallelogram_2d| image:: ../../_static/images/sampling_parallelogram_2d.png
     """
     if seed is not None:
         random.seed(seed)
@@ -390,7 +390,7 @@ def sampling_alligned_parallelogram_2d(n_samples: int, min_x: float, max_x: floa
 
     |sampling_alligned_parallelogram_2d|
 
-    .. |sampling_alligned_parallelogram_2d| image:: ../../../images/sampling_alligned_parallelogram_2d.png
+    .. |sampling_alligned_parallelogram_2d| image:: ../../_static/images/sampling_alligned_parallelogram_2d.png
     '''
     if seed is not None:
         random.seed(seed)
@@ -530,7 +530,7 @@ def sampling_parallelogram_3d(n_samples: int, normal1: Tuple[float, float, float
 
     |sampling_parallelogram_3d|
 
-    .. |sampling_parallelogram_3d| image:: ../../../images/sampling_parallelogram_3d.png
+    .. |sampling_parallelogram_3d| image:: ../../_static/images/sampling_parallelogram_3d.png
     '''
     if seed is not None:
         random.seed(seed)
@@ -652,7 +652,7 @@ def sampling_sphere(n_samples:int=1, center:Tuple[float, float, float]=(0,0,0), 
     
     |sampling_sphere|
 
-    .. |sampling_sphere| image:: ../../../images/sampling_sphere.png
+    .. |sampling_sphere| image:: ../../_static/images/sampling_sphere.png
     """
     # Set the random seed for reproducibility if provided
     if seed is not None:
