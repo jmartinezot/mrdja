@@ -46,12 +46,14 @@ import mrdja.ransac.coreransacutils as crsu
 from typing import Optional, List, Tuple, Dict, Union
 import mrdja.geometry as geom
 
-def get_np_array_of_three_random_points_from_np_array_of_points(points: np.ndarray, num_points: Optional[int] = None) -> np.ndarray:
+def get_np_array_of_three_random_points_from_np_array_of_points(points: np.ndarray, num_points: Optional[int] = None, seed: Optional[int] = None) -> np.ndarray:
     """
     Returns three random points from a list of points.
 
     :param points: Points.
     :type points: np.ndarray
+    :param num_points: Number of points.
+    :type num_points: Optional[int]
     :return: Three random points.
     :rtype: np.ndarray
 
@@ -74,6 +76,8 @@ def get_np_array_of_three_random_points_from_np_array_of_points(points: np.ndarr
     """
     if num_points is None:
         num_points = len(points)
+    if seed is not None:
+        np.random.seed(seed)
     random_points_indices = np.random.choice(range(num_points), 3, replace=False)
     random_points = points[random_points_indices]
     return random_points
@@ -160,24 +164,28 @@ def get_pointcloud_from_indices(pcd: o3d.geometry.PointCloud, indices: np.ndarra
     pcd = pcd.select_by_index(indices)
     return pcd
 
-def get_ransac_iteration_results(points: np.ndarray, len_points: int, threshold: float) -> dict:
+def get_ransac_iteration_results(points: np.ndarray, threshold: float, len_points:Optional[int]=None, seed: Optional[int]=None) -> dict:
     """
     Returns the results of one iteration of the RANSAC algorithm for plane fitting.
     
     :param points: The collection of points to fit the plane to.
     :type points: np.ndarray
-    :param num_points: The number of points to randomly select to fit the plane in this iteration.
-    :type num_points: int
     :param threshold: The maximum distance from a point to the plane for it to be considered an inlier.
     :type threshold: float
+    :param len_points: The number of points in the collection of points.
+    :type len_points: Optional[int]
     :return: A dictionary containing the current plane parameters, number of inliers, and their indices.
     :rtype: dict
     """
+    if len_points is None:
+        len_points = len(points)
+    if seed is not None:
+        np.random.seed(seed)
     current_random_points = get_np_array_of_three_random_points_from_np_array_of_points(points, len_points)
     current_plane = geom.get_plane_from_list_of_three_points(current_random_points.tolist())
     how_many_in_plane, current_point_indices = get_how_many_below_threshold_between_plane_and_points_and_their_indices(points, current_plane, threshold)
-    print(len_points, current_random_points, current_plane, how_many_in_plane)
-    return {"current_plane": current_plane, "number_inliers": how_many_in_plane, "indices_inliers": current_point_indices}
+    # print(len_points, current_random_points, current_plane, how_many_in_plane)
+    return {"current_random_points": current_random_points, "current_plane": current_plane, "threshold": threshold, "number_inliers": how_many_in_plane, "indices_inliers": current_point_indices}
     
 
 def get_ransac_results(points: np.ndarray, num_points: int, threshold: float, num_iterations: int) -> dict:
@@ -240,7 +248,7 @@ def get_ransac_results(points: np.ndarray, num_points: int, threshold: float, nu
     best_plane = None
     number_points_in_best_plane = 0
     for _ in range(num_iterations):
-        dict_results = get_ransac_iteration_results(points, num_points, threshold)
+        dict_results = get_ransac_iteration_results(points, threshold, num_points)
         current_plane = dict_results["current_plane"]
         how_many_in_plane = dict_results["number_inliers"]
         current_indices_inliers = dict_results["indices_inliers"]

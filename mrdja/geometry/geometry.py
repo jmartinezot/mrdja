@@ -1,6 +1,7 @@
 import numpy as np
 from typing import List, Union, Tuple
 from scipy.linalg import svd
+import math
 
 def get_plane_from_list_of_three_points(points: List[List[float]]) -> Union[np.ndarray, None]:
     """
@@ -196,5 +197,43 @@ def find_closest_plane(points: List[List[float]]) -> Tuple[float]:
     # Return the plane equation coefficients
     return (*plane_normal, D)
 
+# compute the distance from a point to a plane
+def get_distance_from_point_to_plane(point:Tuple[float, float, float], plane: Tuple[float, float, float, float])->float:
+    '''
+    Get the distance from a point to a plane.
 
+    :param point: Point.
+    :type point: Tuple[float, float, float]
+    :param plane: Plane equation coefficients.
+    :type plane: Tuple[float, float, float, float]
+    :return: Distance from point to plane.
+    :rtype: float
+
+    :Example:
+
+    ::
+    '''
+    A, B, C, D = plane
+    x, y, z = point
+    return abs(A * x + B * y + C * z + D) / math.sqrt(A * A + B * B + C * C)
+
+# compute the distance from a np array of points to a plane
+def get_distance_from_points_to_plane(points:np.ndarray, plane: Tuple[float, float, float, float])->np.ndarray:
+    '''
+    Get the distance from a np array of points to a plane.
+
+    :param points: Points.
+    :type points: np.ndarray
+    :param plane: Plane equation coefficients.
+    :type plane: Tuple[float, float, float, float]
+    :return: Distance from points to plane.
+    :rtype: np.ndarray
+
+    :Example:
+
+    ::
+    '''
+    A, B, C, D = plane
+    x, y, z = points[:, 0], points[:, 1], points[:, 2]
+    return abs(A * x + B * y + C * z + D) / math.sqrt(A * A + B * B + C * C)
 
