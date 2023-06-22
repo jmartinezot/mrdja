@@ -9,6 +9,9 @@ Welcome to mrdja's documentation!
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+   
+.. automodule:: introduction
+   :members:
 
 .. automodapi:: geometry
 	:skip: svd

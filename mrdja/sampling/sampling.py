@@ -653,6 +653,7 @@ def sampling_sphere(n_samples:int=1, center:Tuple[float, float, float]=(0,0,0), 
     |sampling_sphere|
 
     .. |sampling_sphere| image:: ../../_static/images/sampling_sphere.png
+
     """
     # Set the random seed for reproducibility if provided
     if seed is not None:
