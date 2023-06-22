@@ -20,9 +20,7 @@ sys.path.insert(0, os.path.abspath('../../mrdja/geometry'))
 sys.path.insert(0, os.path.abspath('../../mrdja/procrustes'))
 sys.path.insert(0, os.path.abspath('../../mrdja/geometry'))
 sys.path.insert(0, os.path.abspath('../../mrdja/drawing'))
-
-def setup(app):
-    app.add_css_file('my_theme.css')
+sys.path.insert(0, os.path.abspath('../../mrdja/introduction'))
 
 # -- Project information -----------------------------------------------------
 
@@ -53,11 +51,8 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-# html_theme = 'classic'
-html_theme = "sphinx_rtd_theme" 
-# html_theme_options = {'nosidebar': True, 'body_max_width' : None}
-html_theme_options = {'body_max_width' : None}
 # html_theme = 'alabaster'
+html_theme = 'classic'
 # html_theme = "sphinx_rtd_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
