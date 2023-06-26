@@ -14,12 +14,11 @@ import sphinx_rtd_theme
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../mrdja/sampling'))
+'''
+sys.path.insert(0, os.path.abspath('../../mrdja'))
 sys.path.insert(0, os.path.abspath('../../mrdja/ransac'))
-sys.path.insert(0, os.path.abspath('../../mrdja/geometry'))
-sys.path.insert(0, os.path.abspath('../../mrdja/procrustes'))
-sys.path.insert(0, os.path.abspath('../../mrdja/geometry'))
-sys.path.insert(0, os.path.abspath('../../mrdja/drawing'))
+'''
+sys.path.insert(0, os.path.abspath('../..'))  # Source code dir relative to this file
 
 def setup(app):
     app.add_css_file('my_theme.css')
@@ -56,7 +55,7 @@ exclude_patterns = []
 # html_theme = 'classic'
 html_theme = "sphinx_rtd_theme" 
 # html_theme_options = {'nosidebar': True, 'body_max_width' : None}
-html_theme_options = {'body_max_width' : None}
+html_theme_options = {'body_max_width' : None, 'collapse_navigation' : False}
 # html_theme = 'alabaster'
 # html_theme = "sphinx_rtd_theme"
 

@@ -1,5 +1,0 @@
-from .geometry import get_plane_from_list_of_three_points, get_limits_of_graph_from_limits_of_object
-from .geometry import get_limits_of_3d_graph_from_limits_of_object, get_parallelogram_2d_vertices, get_parallelogram_3d_vertices
-from .geometry import get_plane_equation, find_closest_plane, get_distance_from_point_to_plane
-from .geometry import get_distance_from_points_to_plane
-

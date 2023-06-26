@@ -4,7 +4,7 @@ import numpy as np
 from typing import List, Tuple, Optional
 import open3d as o3d
 
-def set_random_seed(seed):
+def __set_random_seed(seed):
     """
     Set the random seed for reproducibility.
 
@@ -13,7 +13,7 @@ def set_random_seed(seed):
     """
     random.seed(seed)
 
-def sample_point_circle_2d(center: Tuple[float, float], radius: float=1) -> Tuple[float, float]:
+def __sample_point_circle_2d(center: Tuple[float, float], radius: float=1) -> Tuple[float, float]:
     """
     Generate a random point on a 2D circle with a specified radius and center, using rejection sampling.
 
@@ -118,14 +118,14 @@ def sampling_circle_2d(n_samples:int=1, center:Tuple[float, float]=(0,0), radius
     """
     # Set the random seed for reproducibility if provided
     if seed is not None:
-        set_random_seed(seed)
+        __set_random_seed(seed)
 
     # Generate the specified number of samples on the circle
-    samples = [sample_point_circle_2d(center, radius) for _ in range(n_samples)]
+    samples = [__sample_point_circle_2d(center, radius) for _ in range(n_samples)]
 
     return samples
 
-def sample_point_circle_3d_rejection(radius=1, center=np.array([0, 0, 0]), normal=np.array([0, 0, 1])):
+def __sample_point_circle_3d_rejection(radius=1, center=np.array([0, 0, 0]), normal=np.array([0, 0, 1])):
     normal = normal / np.linalg.norm(normal)
     
     while True:
@@ -140,10 +140,10 @@ def sample_point_circle_3d_rejection(radius=1, center=np.array([0, 0, 0]), norma
             return projected_point
 
 def sampling_circle_3d_rejection(n_samples, radius=1, center=np.array([0, 0, 0]), normal=np.array([0, 0, 1])):
-    samples = [sample_point_circle_3d_rejection(radius, center, normal) for _ in range(n_samples)]
+    samples = [__sample_point_circle_3d_rejection(radius, center, normal) for _ in range(n_samples)]
     return samples
 
-def sample_point_parallelogram_2d(normal1: Tuple[float, float], normal2: Tuple[float, float], center: Tuple[float, float], length1: float, length2: float) -> Tuple[float, float]:
+def __sample_point_parallelogram_2d(normal1: Tuple[float, float], normal2: Tuple[float, float], center: Tuple[float, float], length1: float, length2: float) -> Tuple[float, float]:
     '''
     Sample a point from a parallelogram with sides parallel to the vectors normal1 and normal2.
 
@@ -280,10 +280,10 @@ def sampling_parallelogram_2d(n_samples: int, normal1: Tuple[float, float], norm
     normal1 = np.array(normal1)
     normal2 = np.array(normal2) 
     center = np.array(center)
-    samples = [sample_point_parallelogram_2d(normal1, normal2, center, length1, length2) for _ in range(n_samples)]
+    samples = [__sample_point_parallelogram_2d(normal1, normal2, center, length1, length2) for _ in range(n_samples)]
     return samples
 
-def sample_point_alligned_parallelogram_2d(min_x: float, max_x: float, min_y: float, max_y: float) -> Tuple[float, float]:
+def __sample_point_alligned_parallelogram_2d(min_x: float, max_x: float, min_y: float, max_y: float) -> Tuple[float, float]:
     '''
     Sample a point from a parallelogram with sides parallel to the x and y axes.
 
@@ -394,10 +394,10 @@ def sampling_alligned_parallelogram_2d(n_samples: int, min_x: float, max_x: floa
     '''
     if seed is not None:
         random.seed(seed)
-    samples = [sample_point_alligned_parallelogram_2d(min_x, max_x, min_y, max_y) for _ in range(n_samples)]
+    samples = [__sample_point_alligned_parallelogram_2d(min_x, max_x, min_y, max_y) for _ in range(n_samples)]
     return samples
 
-def sample_point_parallelogram_3d(normal1: Tuple[float, float, float], normal2: Tuple[float, float, float], 
+def __sample_point_parallelogram_3d(normal1: Tuple[float, float, float], normal2: Tuple[float, float, float], 
                                   normal3: Tuple[float, float, float], center: Tuple[float, float, float], 
                                   length1: float, length2: float, length3: float) -> Tuple[float, float, float]:
     '''
@@ -538,10 +538,10 @@ def sampling_parallelogram_3d(n_samples: int, normal1: Tuple[float, float, float
     normal2 = np.array(normal2)
     normal3 = np.array(normal3)
     center = np.array(center)
-    samples = [sample_point_parallelogram_3d(normal1, normal2, normal3, center, length1, length2, length3) for _ in range(n_samples)]
+    samples = [__sample_point_parallelogram_3d(normal1, normal2, normal3, center, length1, length2, length3) for _ in range(n_samples)]
     return samples
 
-def sample_point_cuboid(a, b, c, d, h):
+def __sample_point_cuboid(a, b, c, d, h):
     u = random.random()
     v = random.random()
     w = random.random()
@@ -551,10 +551,10 @@ def sample_point_cuboid(a, b, c, d, h):
     return x, y, z
 
 def sampling_cuboid(n_samples, a, b, c, d, h):
-    samples = [sample_point_cuboid(a, b, c, d, h) for _ in range(n_samples)]
+    samples = [__sample_point_cuboid(a, b, c, d, h) for _ in range(n_samples)]
     return samples
 
-def sample_point_sphere(center:Tuple[float, float, float]=(0, 0, 0), radius:float=1):
+def __sample_point_sphere(center:Tuple[float, float, float]=(0, 0, 0), radius:float=1):
     """
     Generate a random point on a sphere with a specified radius and center, using rejection sampling.
 
@@ -657,10 +657,10 @@ def sampling_sphere(n_samples:int=1, center:Tuple[float, float, float]=(0,0,0), 
     """
     # Set the random seed for reproducibility if provided
     if seed is not None:
-        set_random_seed(seed)
+        __set_random_seed(seed)
 
     # Generate the specified number of samples on the circle
-    samples = [sample_point_sphere(center, radius) for _ in range(n_samples)]
+    samples = [__sample_point_sphere(center, radius) for _ in range(n_samples)]
 
     return samples
 

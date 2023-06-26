@@ -46,6 +46,42 @@ import mrdja.ransac.coreransacutils as crsu
 from typing import Optional, List, Tuple, Dict, Union
 import mrdja.geometry as geom
 
+def get_np_array_of_two_random_points_from_np_array_of_points(points: np.ndarray, num_points: Optional[int] = None, seed: Optional[int] = None) -> np.ndarray:
+    """
+    Returns two random points from a list of points.
+
+    :param points: Points.
+    :type points: np.ndarray
+    :param num_points: Number of points.
+    :type num_points: Optional[int]
+    :return: Three random points.
+    :rtype: np.ndarray
+
+    :Example:
+
+    ::
+
+        >>> import coreransac
+        >>> import numpy as np
+        >>> points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+        >>> points
+        array([[0, 0, 0],
+               [1, 0, 0],
+               [0, 1, 0]])
+        >>> random_points = coreransac.get_three_random_points(points)
+        >>> random_points
+        array([[1, 0, 0],
+               [0, 1, 0],
+               [0, 0, 0]])
+    """
+    if num_points is None:
+        num_points = len(points)
+    if seed is not None:
+        np.random.seed(seed)
+    random_points_indices = np.random.choice(range(num_points), 2, replace=False)
+    random_points = points[random_points_indices]
+    return random_points
+
 def get_np_array_of_three_random_points_from_np_array_of_points(points: np.ndarray, num_points: Optional[int] = None, seed: Optional[int] = None) -> np.ndarray:
     """
     Returns three random points from a list of points.
@@ -81,6 +117,60 @@ def get_np_array_of_three_random_points_from_np_array_of_points(points: np.ndarr
     random_points_indices = np.random.choice(range(num_points), 3, replace=False)
     random_points = points[random_points_indices]
     return random_points
+
+def get_how_many_below_threshold_between_line_and_points_and_their_indices(points: np.ndarray, line_two_points: np.ndarray, threshold: np.float32) -> Tuple[int, np.ndarray]:
+    """
+    Computes how many points are below a threshold distance from a line and returns their count and their indices.
+
+    :param a: A parameter of the plane.
+    :type a: np.float32
+    :param b: B parameter of the plane.
+    :type b: np.float32
+    :param c: C parameter of the plane.
+    :type c: np.float32
+    :param d: D parameter of the plane.
+    :type d: np.float32
+    :param points_x: X coordinates of the points.
+    :type points_x: np.ndarray
+    :param points_y: Y coordinates of the points.
+    :type points_y: np.ndarray
+    :param points_z: Z coordinates of the points.
+    :type points_z: np.ndarray
+    :param threshold: Maximum distance to the plane.
+    :type threshold: np.float32
+    :return: Number of points below the threshold distance as their indices.
+    :rtype: Tuple[int, np.ndarray]
+
+    :Example:
+
+    ::
+
+        >>> import customransac
+        >>> plane = np.array([1,1,1,1], dtype="float32")
+        >>> points = [[-1, -1, -1], [0, 0, 0], [1, 1, 1], [2, 2, 2]]
+        >>> points_x = np.array([p[0] for p in points], dtype="float32")
+        >>> points_y = np.array([p[1] for p in points], dtype="float32")
+        >>> points_z = np.array([p[2] for p in points], dtype="float32")
+        >>> threshold = 1
+        >>> count, indices = customransac.get_how_many_below_threshold_between_plane_and_points_and_indices(plane[0], plane[1], plane[2], plane[3], points_x, points_y, points_z, threshold)
+        >>> count
+        1
+        >>> indices
+        array([1])
+    """
+    B = line_two_points[0]
+    C = line_two_points[1]
+    # the distance between a point A and the line defined by the points B and C can be computed as 
+    # magnitude(cross(A - B, C - B)) / magnitude(C - B)
+    # https://math.stackexchange.com/questions/1905533/find-perpendicular-distance-from-point-to-line-in-3d
+
+    cross_product = np.cross(points - B, C - B)
+    magnitude_cross_product = np.linalg.norm(cross_product, axis=1)
+    magnitude_C_minus_B = np.linalg.norm(C - B)
+    distance = magnitude_cross_product / magnitude_C_minus_B
+
+    indices_inliers = np.array([index for index, value in enumerate(distance) if value <= threshold], dtype=np.int64)
+    return len(indices_inliers), indices_inliers
 
 def get_how_many_below_threshold_between_plane_and_points_and_their_indices(points: np.ndarray, plane: np.ndarray, threshold: np.float32) -> Tuple[int, np.ndarray]:
     """
@@ -163,6 +253,30 @@ def get_pointcloud_from_indices(pcd: o3d.geometry.PointCloud, indices: np.ndarra
     """
     pcd = pcd.select_by_index(indices)
     return pcd
+
+def get_ransac_line_iteration_results(points: np.ndarray, threshold: float, len_points:Optional[int]=None, seed: Optional[int]=None) -> dict:
+    """
+    Returns the results of one iteration of the RANSAC algorithm for line fitting.
+    
+    :param points: The collection of points to fit the line to.
+    :type points: np.ndarray
+    :param threshold: The maximum distance from a point to the line for it to be considered an inlier.
+    :type threshold: float
+    :param len_points: The number of points in the collection of points.
+    :type len_points: Optional[int]
+    :return: A dictionary containing the current line parameters, number of inliers, and their indices.
+    :rtype: dict
+    """
+    if len_points is None:
+        len_points = len(points)
+    if seed is not None:
+        np.random.seed(seed)
+    current_random_points = get_np_array_of_two_random_points_from_np_array_of_points(points, len_points)
+    current_line = current_random_points # the easiest way to get the line parameters
+    how_many_in_line, current_point_indices = get_how_many_below_threshold_between_line_and_points_and_their_indices(points, current_line, threshold)
+    # print(len_points, current_random_points, current_plane, how_many_in_plane)
+    return {"current_random_points": current_random_points, "current_line": current_line, "threshold": threshold, "number_inliers": how_many_in_line, "indices_inliers": current_point_indices}
+
 
 def get_ransac_iteration_results(points: np.ndarray, threshold: float, len_points:Optional[int]=None, seed: Optional[int]=None) -> dict:
     """

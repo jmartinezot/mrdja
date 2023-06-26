@@ -1,3 +1,8 @@
+'''
+RANSAC functions
+
+'''
+
 import open3d as o3d
 import mrdja.ransac.coreransac as coreransac
 import mrdja.ransac.coreransaccuda as coreransaccuda
