@@ -237,3 +237,11 @@ def get_distance_from_points_to_plane(points:np.ndarray, plane: Tuple[float, flo
     x, y, z = points[:, 0], points[:, 1], points[:, 2]
     return abs(A * x + B * y + C * z + D) / math.sqrt(A * A + B * B + C * C)
 
+def fit_plane_svd(points):
+    centroid = np.mean(points, axis=0)
+    shifted_points = points - centroid
+    _, _, V = np.linalg.svd(shifted_points)
+    normal = V[2]
+    d = -np.dot(normal, centroid)
+    return normal[0], normal[1], normal[2], d
+    # return normal, d
