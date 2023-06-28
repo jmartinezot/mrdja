@@ -243,5 +243,22 @@ def fit_plane_svd(points):
     _, _, V = np.linalg.svd(shifted_points)
     normal = V[2]
     d = -np.dot(normal, centroid)
-    return normal[0], normal[1], normal[2], d
-    # return normal, d
+    # Compute sum of squared errors
+    errors = np.abs(np.dot(points, normal) + d)
+    sse = np.sum(errors ** 2)
+
+    return normal[0], normal[1], normal[2], d, sse
+
+def get_angle_between_vectors(v1, v2):
+    v1 = np.array(v1)
+    v2 = np.array(v2)
+    return np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
+
+def get_angle_between_lines(l1, l2):
+    v1 = l1[1] - l1[0]
+    v2 = l2[1] - l2[0]
+    print("Line 1: ", l1)
+    print("Line 2: ", l2)
+    print("Vector 1: ", v1)
+    print("Vector 2: ", v2)
+    return np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))

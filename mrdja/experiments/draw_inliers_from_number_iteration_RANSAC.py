@@ -45,8 +45,8 @@ def get_RANSAC_data_from_file(filename, ransac_iterations, threshold, seed):
     dict_full_results["ransac_best_iteration_results"] = best_iteration_results
     return dict_full_results
 
-ransac_iterations = 1000
-threshold = 0.002
+ransac_iterations = 800
+threshold = 0.02
 seed = 42
 
 filename = "/home/scpmaotj/Stanford3dDataset_v1.2/Area_1/conferenceRoom_1/conferenceRoom_1.ply"
@@ -80,12 +80,17 @@ def draw_inliers_from_iteration(RANSAC_data_from_file, pcd, iteration_number):
     number_inliers = get_number_inliers_from_iteration(RANSAC_data_from_file, iteration_number)
     o3d.visualization.draw_geometries([pcd, pcd_inliers], window_name="Inliers from iteration " + str(iteration_number) + " with " + str(number_inliers) + " inliers")
 
+max_number_inliers = 0
 for iteration_number in range(ransac_iterations):
     # only show if the number of inliers is greater than threshold
-    threshold = 4000
-    if get_number_inliers_from_iteration(RANSAC_data_from_file, iteration_number) > threshold:
+    threshold_inliers = 40000
+    current_number_inliers = get_number_inliers_from_iteration(RANSAC_data_from_file, iteration_number)
+    if current_number_inliers > max_number_inliers:
+        max_number_inliers = current_number_inliers
+    if current_number_inliers > threshold_inliers:
         draw_inliers_from_iteration(RANSAC_data_from_file, pcd, iteration_number)
 
+print("max_number_inliers: " + str(max_number_inliers))
 
 
 
