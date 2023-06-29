@@ -302,7 +302,7 @@ def get_ransac_iteration_results(points: np.ndarray, threshold: float, len_point
     return {"current_random_points": current_random_points, "current_plane": current_plane, "threshold": threshold, "number_inliers": how_many_in_plane, "indices_inliers": current_point_indices}
     
 
-def get_ransac_results(points: np.ndarray, num_points: int, threshold: float, num_iterations: int) -> dict:
+def get_ransac_results(points: np.ndarray, len_points: int, threshold: float, num_iterations: int) -> dict:
     """
     Computes the best plane that fits a collection of points and the indices of the inliers.
     
@@ -362,12 +362,12 @@ def get_ransac_results(points: np.ndarray, num_points: int, threshold: float, nu
     best_plane = None
     number_points_in_best_plane = 0
     for _ in range(num_iterations):
-        dict_results = get_ransac_iteration_results(points, threshold, num_points)
+        dict_results = get_ransac_iteration_results(points, threshold, len_points)
         current_plane = dict_results["current_plane"]
         how_many_in_plane = dict_results["number_inliers"]
         current_indices_inliers = dict_results["indices_inliers"]
         if how_many_in_plane > number_points_in_best_plane:
-            inliers_ratio = how_many_in_plane / num_points
+            inliers_ratio = how_many_in_plane / len_points
             max_num_iterations = crsu.compute_number_iterations(inliers_ratio, alpha = 0.05)
             print("Current inliers ratio: ", inliers_ratio, " Max num iterations: ", max_num_iterations)
             number_points_in_best_plane = how_many_in_plane
