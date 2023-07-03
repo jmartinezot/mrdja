@@ -1,4 +1,5 @@
 import mrdja.ransac.coreransac as coreransac
+import mrdja.ransac.coreransaccuda as coreransaccuda
 import mrdja.pointcloud as pointcloud
 import mrdja.geometry as geometry
 import mrdja.drawing as drawing
@@ -115,6 +116,11 @@ print (list_plane_05)
 
 # get the best plane from the 95% percentile of sse and the number of inliers
 
+# Extract x, y, z coordinates from np_points
+points_x = np_points[:, 0]
+points_y = np_points[:, 1]
+points_z = np_points[:, 2]
+
 how_many_maximum = 0
 best_plane = None
 print("Starting the final loop")
@@ -122,7 +128,12 @@ for i in range(len(list_sse_05)):
     print("Iteration", i)
     new_plane = list_plane_05[i]
     threshold_pcd = 0.02
-    how_many, inliers = coreransac.get_how_many_below_threshold_between_plane_and_points_and_their_indices(np_points, new_plane, threshold_pcd)
+    how_many, inliers = coreransaccuda.get_how_many_below_threshold_between_plane_and_points_and_their_indices_cuda(np_points, 
+                                                                                                points_x,
+                                                                                                points_y,
+                                                                                                points_z,
+                                                                                                new_plane, threshold_pcd)
+
     if how_many > how_many_maximum:
         how_many_maximum = how_many
         inliers_maximum = inliers

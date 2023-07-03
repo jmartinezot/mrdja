@@ -10,7 +10,7 @@ import sys
 import mrdja.geometry as geom
 
 @cuda.jit
-def get_how_many_below_threshold_kernel(points_x: np.ndarray, points_y: np.ndarray, points_z: np.ndarray,
+def get_how_many_and_which_below_threshold_kernel(points_x: np.ndarray, points_y: np.ndarray, points_z: np.ndarray,
                                          a: float, b: float, c: float, d: float,
                                          optimized_threshold: float, point_indices: np.ndarray) -> None:
     """
@@ -40,6 +40,38 @@ def get_how_many_below_threshold_kernel(points_x: np.ndarray, points_y: np.ndarr
         dist = math.fabs(a * points_x[i] + b * points_y[i] + c * points_z[i] + d)
         if dist <= optimized_threshold:
             point_indices[i] = 1
+
+@cuda.jit
+def get_how_many_below_threshold_kernel(points_x: np.ndarray, points_y: np.ndarray, points_z: np.ndarray,
+                                         a: float, b: float, c: float, d: float,
+                                         optimized_threshold: float, result: int) -> None:
+    """
+    Computes the number of points that are below a threshold distance from a plane using CUDA parallel processing.
+    
+    :param points_x: The x-coordinates of the points.
+    :type points_x: np.ndarray
+    :param points_y: The y-coordinates of the points.
+    :type points_y: np.ndarray
+    :param points_z: The z-coordinates of the points.
+    :type points_z: np.ndarray
+    :param a: The first coefficient of the plane equation.
+    :type a: float
+    :param b: The second coefficient of the plane equation.
+    :type b: float
+    :param c: The third coefficient of the plane equation.
+    :type c: float
+    :param d: The fourth coefficient of the plane equation.
+    :type d: float
+    :param optimized_threshold: The threshold distance from the plane.
+    :type optimized_threshold: float
+    :param point_indices: The array of indices representing the points that are below the threshold.
+    :type point_indices: np.ndarray
+    """
+    i = cuda.grid(1) # to compute the index of the current thread
+    if i < points_x.shape[0]:
+        dist = math.fabs(a * points_x[i] + b * points_y[i] + c * points_z[i] + d)
+        if dist <= optimized_threshold:
+            cuda.atomic.add(result, 0, 1)
 
 '''
 @cuda.jit
@@ -71,9 +103,67 @@ def get_how_many_below_threshold_kernel(points_x, points_y, points_z, a, b, c, d
             point_indices[i] = 1
 '''
 
-def get_how_many_below_threshold_between_plane_and_points_and_their_indices_cuda(
+# ARREGLAR ESTO!!!
+def get_how_many_below_threshold_between_line_and_points_and_their_indices_cuda(
     points: np.ndarray, points_x: np.ndarray, points_y: np.ndarray, points_z: np.ndarray,
     d_points_x: np.ndarray, d_points_y: np.ndarray, d_points_z: np.ndarray, 
+    line: Tuple[float, float, float, float], threshold: float) -> Tuple[int, List[int]]:
+    """
+    Computes the number of points that are below a threshold distance from a plane and their indices using CUDA parallel processing.
+    
+    :param points: The array of points in the format (x, y, z).
+    :type points: np.ndarray
+    :param points_x: The x-coordinates of the points.
+    :type points_x: np.ndarray
+    :param points_y: The y-coordinates of the points.
+    :type points_y: np.ndarray
+    :param points_z: The z-coordinates of the points.
+    :type points_z: np.ndarray
+    :param d_points_x: The x-coordinates of the points in device memory.
+    :type d_points_x: np.ndarray
+    :param d_points_y: The y-coordinates of the points in device memory.
+    :type d_points_y: np.ndarray
+    :param d_points_z: The z-coordinates of the points in device memory.
+    :type d_points_z: np.ndarray
+    :param plane: The coefficients of the plane equation.
+    :type plane: Tuple[float, float, float, float]
+    :param threshold: The threshold distance from the plane.
+    :type threshold: float
+    :return: The number of points below the threshold and their indices.
+    :rtype: Tuple[int, List[int]]
+    """
+    t1 = time()
+    B = line[0]
+    C = line[1]
+    magnitude_C_minus_B = np.linalg.norm(C - B)
+    num_points = points.shape[0]
+    point_indices = np.zeros(num_points, dtype=np.int32)
+    optimized_threshold = threshold * math.sqrt(a * a + b * b + c * c)
+    point_indices = np.empty(num_points, dtype=np.int64)
+    # fill point_indices with -1
+    point_indices[:] = -1
+    threadsperblock = 512
+    blockspergrid = math.ceil(num_points / threadsperblock)
+    # point_indices = cuda.device_array(point_indices.shape, dtype=point_indices.dtype)
+    d_point_indices = cuda.to_device(point_indices)
+    t2 = time()
+    get_how_many_below_threshold_kernel[blockspergrid, threadsperblock](d_points_x, d_points_y, d_points_z, a, b, c, d, optimized_threshold, d_point_indices)
+    t3 = time()
+    point_indices = d_point_indices.copy_to_host()
+    # get the count of point_indices that are not -1
+    count = np.count_nonzero(point_indices != -1)
+    # get the indices of the points that are not -1
+    new_indices = np.where(point_indices != -1)
+    new_indices = new_indices[0].tolist()
+    t4 = time()
+    print(f't2 - t1: {(t2-t1):.4f}s')
+    print(f't3 - t2: {(t3-t2):.4f}s')
+    print(f't4 - t3: {(t4-t3):.4f}s')
+    return count, new_indices
+
+# OK
+def get_how_many_and_which_below_threshold_between_plane_and_points_and_their_indices_cuda(
+    points: np.ndarray, d_points_x: np.ndarray, d_points_y: np.ndarray, d_points_z: np.ndarray, 
     plane: Tuple[float, float, float, float], threshold: float) -> Tuple[int, List[int]]:
     """
     Computes the number of points that are below a threshold distance from a plane and their indices using CUDA parallel processing.
@@ -128,6 +218,107 @@ def get_how_many_below_threshold_between_plane_and_points_and_their_indices_cuda
     print(f't3 - t2: {(t3-t2):.4f}s')
     print(f't4 - t3: {(t4-t3):.4f}s')
     return count, new_indices
+
+# OK
+def get_how_many_below_threshold_between_plane_and_points_and_their_indices_cuda(
+    points: np.ndarray, d_points_x: np.ndarray, d_points_y: np.ndarray, d_points_z: np.ndarray, 
+    plane: Tuple[float, float, float, float], threshold: float) -> int:
+    """
+    Computes the number of points that are below a threshold distance from a plane and their indices using CUDA parallel processing.
+    
+    :param points: The array of points in the format (x, y, z).
+    :type points: np.ndarray
+    :param points_x: The x-coordinates of the points.
+    :type points_x: np.ndarray
+    :param points_y: The y-coordinates of the points.
+    :type points_y: np.ndarray
+    :param points_z: The z-coordinates of the points.
+    :type points_z: np.ndarray
+    :param d_points_x: The x-coordinates of the points in device memory.
+    :type d_points_x: np.ndarray
+    :param d_points_y: The y-coordinates of the points in device memory.
+    :type d_points_y: np.ndarray
+    :param d_points_z: The z-coordinates of the points in device memory.
+    :type d_points_z: np.ndarray
+    :param plane: The coefficients of the plane equation.
+    :type plane: Tuple[float, float, float, float]
+    :param threshold: The threshold distance from the plane.
+    :type threshold: float
+    :return: The number of points below the threshold and their indices.
+    :rtype: Tuple[int, List[int]]
+    """
+    # t1 = time()
+    a = plane[0]
+    b = plane[1]
+    c = plane[2]
+    d = plane[3]
+    num_points = points.shape[0]
+    optimized_threshold = threshold * math.sqrt(a * a + b * b + c * c)
+    # Output variable to store the result
+    result = np.array([0], dtype=np.int32)
+    d_result = cuda.to_device(result)
+    threadsperblock = 1024
+    max_threads_per_block = cuda.get_current_device().MAX_THREADS_PER_BLOCK
+    threadsperblock = min(max_threads_per_block, threadsperblock)
+    blockspergrid = math.ceil(num_points / threadsperblock)
+    # t2 = time()
+    get_how_many_below_threshold_kernel[blockspergrid, threadsperblock](d_points_x, d_points_y, d_points_z, a, b, c, d, optimized_threshold, d_result)
+    # t3 = time()
+    # Copy the result back to the host
+    cuda.synchronize()
+    result = d_result.copy_to_host()[0]
+    # t4 = time()
+    # print(f't2 - t1: {(t2-t1):.4f}s')
+    # print(f't3 - t2: {(t3-t2):.4f}s')
+    # print(f't4 - t3: {(t4-t3):.4f}s')
+    return result
+
+
+# MODIFICAR ESTO!!!
+def get_ransac_line_iteration_results_cuda(points: np.ndarray, 
+                                       points_x: np.ndarray, 
+                                       points_y: np.ndarray, 
+                                       points_z: np.ndarray, 
+                                       d_points_x: cuda.devicearray.DeviceNDArray, 
+                                       d_points_y: cuda.devicearray.DeviceNDArray, 
+                                       d_points_z: cuda.devicearray.DeviceNDArray, 
+                                       num_points: int, 
+                                       threshold: float) -> dict:
+    """
+    Computes the number of inliers and the plane parameters for one iteration of the RANSAC algorithm using CUDA.
+
+    :param points: Array of points.
+    :type points: np.ndarray
+    :param points_x: X coordinates of the points.
+    :type points_x: np.ndarray
+    :param points_y: Y coordinates of the points.
+    :type points_y: np.ndarray
+    :param points_z: Z coordinates of the points.
+    :type points_z: np.ndarray
+    :param d_points_x: Device array of X coordinates of the points.
+    :type d_points_x: cuda.devicearray.DeviceNDArray
+    :param d_points_y: Device array of Y coordinates of the points.
+    :type d_points_y: cuda.devicearray.DeviceNDArray
+    :param d_points_z: Device array of Z coordinates of the points.
+    :type d_points_z: cuda.devicearray.DeviceNDArray
+    :param num_points: Number of random points to select for each iteration.
+    :type num_points: int
+    :param threshold: Maximum distance to the plane.
+    :type threshold: float
+    :return: Dictionary with the plane parameters, the number of inliers, and the indices of the inliers.
+    :rtype: dict
+    """
+    t1 = time()
+    # esto es lo que tarda mucho
+    current_random_points = crs.get_np_array_of_two_random_points_from_np_array_of_points(points, num_points)
+    t2 = time()
+    current_line = current_random_points
+    t3 = time()
+    print(f't2 - t1: {(t2-t1):.4f}s')
+    print(f't3 - t2: {(t3-t2):.4f}s')
+    how_many_in_line, current_point_indices = get_how_many_below_threshold_between_line_and_points_and_their_indices_cuda(points, points_x, points_y, points_z, d_points_x, d_points_y, d_points_z, current_line, threshold)
+    print(num_points, current_random_points, current_line, how_many_in_line)
+    return {"current_random_point": current_random_points, "current_line": current_line, "threshold": threshold, "number_inliers": how_many_in_line, "indices_inliers": current_point_indices}
 
 def get_ransac_iteration_results_cuda(points: np.ndarray, 
                                        points_x: np.ndarray, 
