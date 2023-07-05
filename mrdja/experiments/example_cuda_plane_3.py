@@ -5,6 +5,7 @@ import math
 from typing import Tuple, List
 from numba import cuda
 import mrdja.ransac.coreransaccuda as coreransaccuda
+import mrdja.ransac.coreransac as coreransac
 
 
 @cuda.jit
@@ -37,7 +38,7 @@ d_points_y = cuda.to_device(d_points_y)
 d_points_z = cuda.to_device(d_points_z)
 
 num_points = np_points.shape[0]
-iterations = 1000
+iterations = 10
 
 threadsperblock = 1024
 max_threads_per_block = cuda.get_current_device().MAX_THREADS_PER_BLOCK
@@ -46,6 +47,7 @@ blockspergrid = math.ceil(num_points / threadsperblock)
 
 t1 = time()
 np.random.seed(42)
+print("CUDA implementation in file")
 for _ in range(iterations):
     a, b, c, d = np.random.rand(4)
     # a, b, c, d = 0.1, 0.2, 0.3, 0.4
@@ -61,13 +63,14 @@ for _ in range(iterations):
     # Copy the result back to the host
     cuda.synchronize()
     result = d_result.copy_to_host()[0]
-    # print(result)
+    print(result)
 
 t2 =time()
 print(f't2 - t1: {(t2-t1):.4f}s')
 
 t1 = time()
 np.random.seed(42)
+print("CUDA implementation (plane) in coreraansaccuda.py")
 for _ in range(iterations):
     a, b, c, d = np.random.rand(4)
     # a, b, c, d = 0.1, 0.2, 0.3, 0.4
@@ -75,11 +78,48 @@ for _ in range(iterations):
     # Output variable to store the result
     result = np.array([0], dtype=np.int32)
     d_result = cuda.to_device(result)
-    other_result = coreransaccuda.get_how_many_below_threshold_between_plane_and_points_and_their_indices_cuda(np_points, d_points_x, d_points_y, d_points_z, new_plane, threshold_pcd)
-    # print(other_result)
+    other_result = coreransaccuda.get_how_many_below_threshold_between_plane_and_points_cuda(np_points, d_points_x, d_points_y, d_points_z, new_plane, threshold_pcd)
+    print(other_result)
 t2 =time()
 print(f't2 - t1: {(t2-t1):.4f}s')
 
+t1 = time()
+np.random.seed(42)
+print("CPU implementation (plane) in coreraansac.py")
+for _ in range(iterations):
+    a, b, c, d = np.random.rand(4)
+    # a, b, c, d = 0.1, 0.2, 0.3, 0.4
+    new_plane = (a, b, c, d)
+    how_many, indices = coreransac.get_how_many_below_threshold_between_plane_and_points_and_their_indices(np_points, new_plane, threshold_pcd)
+    print(how_many)
+t2 =time()
+print(f't2 - t1: {(t2-t1):.4f}s')
+
+t1 = time()
+np.random.seed(42)
+print("CUDA implementation (line) in coreraansaccuda.py")
+for _ in range(iterations):
+    a, b, c, d, e, f = np.random.rand(6)
+    # a, b, c, d = 0.1, 0.2, 0.3, 0.4
+    line_two_points = ((a, b, c), (d, e, f))
+    other_result = coreransaccuda.get_how_many_below_threshold_between_line_and_points_cuda(np_points, d_points_x, d_points_y, d_points_z, line_two_points, threshold_pcd)
+    print(other_result)
+t2 =time()
+print(f't2 - t1: {(t2-t1):.4f}s')
+
+t1 = time()
+np.random.seed(42)
+print("CPU implementation (line) in coreraansac.py")
+for _ in range(iterations):
+    a, b, c, d, e, f = np.random.rand(6)
+    # a, b, c, d = 0.1, 0.2, 0.3, 0.4
+    line_two_points = np.array([[a, b, c], [d, e, f]])
+    how_many, indices = coreransac.get_how_many_below_threshold_between_line_and_points_and_their_indices(np_points, line_two_points, threshold_pcd)
+    print(how_many)
+t2 =time()
+print(f't2 - t1: {(t2-t1):.4f}s')
+
+print("Open3D implementation 1000")
 t1 = time()
 plane_model, inliers = pcd.segment_plane(distance_threshold=threshold_pcd,
                                          ransac_n=3,
@@ -87,6 +127,7 @@ plane_model, inliers = pcd.segment_plane(distance_threshold=threshold_pcd,
 t2 =time()
 print(f't2 - t1: {(t2-t1):.4f}s')
 
+print("Open3D implementation 100000")
 t1 = time()
 plane_model, inliers = pcd.segment_plane(distance_threshold=threshold_pcd,
                                          ransac_n=3,

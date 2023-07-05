@@ -46,7 +46,7 @@ import mrdja.ransac.coreransacutils as crsu
 from typing import Optional, List, Tuple, Dict, Union
 import mrdja.geometry as geom
 
-def get_np_array_of_two_random_points_from_np_array_of_points(points: np.ndarray, num_points: Optional[int] = None, seed: Optional[int] = None) -> np.ndarray:
+def get_np_array_of_two_random_points_from_np_array_of_points(points: np.ndarray, repetitions: int=1, num_points: Optional[int] = None, seed: Optional[int] = None) -> np.ndarray:
     """
     Returns two random points from a list of points.
 
@@ -78,8 +78,10 @@ def get_np_array_of_two_random_points_from_np_array_of_points(points: np.ndarray
         num_points = len(points)
     if seed is not None:
         np.random.seed(seed)
-    random_points_indices = np.random.choice(range(num_points), 2, replace=False)
+    random_points_indices = np.random.choice(range(num_points), size= 2 * repetitions, replace=False)
     random_points = points[random_points_indices]
+    # create a list of pairs of points from the array random_points
+    random_points = random_points.reshape(repetitions, 2, 3)
     return random_points
 
 def get_np_array_of_three_random_points_from_np_array_of_points(points: np.ndarray, num_points: Optional[int] = None, seed: Optional[int] = None) -> np.ndarray:
