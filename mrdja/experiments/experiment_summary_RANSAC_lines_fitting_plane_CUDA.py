@@ -115,6 +115,11 @@ t1 = time.time()
 
 for filename in ply_files:
 
+    filename_pkl_check = filename.replace(".ply", ".pkl")
+    # check if filename_pkl_check exists
+    if os.path.isfile(filename_pkl_check):
+        continue
+
     print("filename", filename)
 
     dict_all_results = {}
