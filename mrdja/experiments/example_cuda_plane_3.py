@@ -18,7 +18,8 @@ def get_how_many_below_threshold_kernel(points_x: np.ndarray, points_y: np.ndarr
         if dist <= optimized_threshold:
             cuda.atomic.add(result, 0, 1)
 
-filename = "/home/scpmaotj/Stanford3dDataset_v1.2/Area_1/WC_1/WC_1.ply"
+# filename = "/home/scpmaotj/Stanford3dDataset_v1.2/Area_1/WC_1/WC_1.ply"
+filename = "/tmp/Stanford3dDataset_v1.2/Area_1/WC_1/WC_1.ply"
 pcd = o3d.io.read_point_cloud(filename)
 np_points = np.asarray(pcd.points)
 threshold_pcd = 22.52

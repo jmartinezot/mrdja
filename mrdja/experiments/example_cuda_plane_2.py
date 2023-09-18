@@ -17,6 +17,7 @@ def get_how_many_below_threshold_kernel(points_x: np.ndarray, points_y: np.ndarr
             cuda.atomic.add(result, 0, 1)
 
 filename = "/home/scpmaotj/Stanford3dDataset_v1.2/Area_1/WC_1/WC_1.ply"
+# filename = "/home/bee/S3DIS/Stanford3dDataset_v1.2/Area_1/WC_1/WC_1.ply"
 pcd = o3d.io.read_point_cloud(filename)
 np_points = np.asarray(pcd.points)
 threshold_pcd = 22.52
@@ -49,14 +50,11 @@ for _ in range(iterations):
     a, b, c, d = np.random.rand(4)
     # a, b, c, d = 0.1, 0.2, 0.3, 0.4
     new_plane = (a, b, c, d)
-
     # Output variable to store the result
     result = np.array([0], dtype=np.int32)
     d_result = cuda.to_device(result)
-
     optimized_threshold = threshold_pcd * math.sqrt(a * a + b * b + c * c)
     get_how_many_below_threshold_kernel[blockspergrid, threadsperblock](d_points_x, d_points_y, d_points_z, a, b, c, d, optimized_threshold, d_result)
-
     # Copy the result back to the host
     cuda.synchronize()
     result = d_result.copy_to_host()[0]

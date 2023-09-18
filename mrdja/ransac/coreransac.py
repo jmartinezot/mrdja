@@ -1,42 +1,89 @@
 '''
+We only work with **RANSAC** for finding geometric primitives in point clouds. These primitives are **planes** and **lines**.
 
-FIX ALL DOCSTRINGS
+In this module all the functions related to the **RANSAC** algorithm for **planes** and **lines** are defined.
 
-import open3d as o3d
-import numpy as np
-import coreransac as crs
-import coreransaccuda as crscuda
+The **pointcloud** is expected to be a **numpy array** of shape **(N, 3)** where **N** is the number of **points** and **3** is the 
+number of **coordinates (x, y, z)**. 
+**No** information about **RGB** values or normals are taken into account. Therefore, an **Open3D** point cloud must be **converted**
+to a **numpy array** before 
+using the functions in this module.
 
-def remove_origin_points(pcd):
-    """
-    Removes all points with (0, 0, 0) coordinates from an Open3D point cloud.
-    """
-    new_pcd = o3d.geometry.PointCloud()
-    points = np.asarray(pcd.points)
-    new_points = points[~np.all(points == 0, axis=1)]
-    colors = np.asarray(pcd.colors)
-    new_colors = colors[~np.all(points == 0, axis=1)]
-    new_pcd.points = o3d.utility.Vector3dVector(new_points)
-    new_pcd.colors = o3d.utility.Vector3dVector(new_colors)
-    return new_pcd
+The following code is an example of how to extract the points from an Open3D point cloud and convert them to a numpy array:
+
+::
+
+    import numpy as np
+    import open3d as o3d
+
+    filename = "pointcloud.ply"
+    pcd = o3d.io.read_point_cloud(filename)
+    np_points = np.asarray(pcd.points)
+
+The pointcloud could be in **ply* or **pcd** format, because Open3D can read both formats.
+
+You can always access to the pointclouds provided by Open3D. For example, the following code shows how to access to the LivingRoomPointClouds, 
+which are 57 point clouds of from the Redwood RGB-D Dataset.
+
+::
+
+    import open3d as o3d
+    dataset = o3d.data.LivingRoomPointClouds()
+    pcds_living_rooms = []
+    for pcd_path in dataset.paths:
+        pcds_living_rooms.append(o3d.io.read_point_cloud(pcd_path))
+
+Other 53 pointclouds from the same dataset are also available in OfficePointClouds:
+
+::
+
+    import open3d as o3d
+    dataset = o3d.data.OfficePointClouds()
+    pcds_offices = []
+    for pcd_path in dataset.paths:
+        pcds_offices.append(o3d.io.read_point_cloud(pcd_path))
+
+After executing the previous code, we could define two examples of a living room pointcloud and an office pointcloud, respectively:
+
+::
+
+    living_room_pcd = pcds_living_rooms[0]
+    office_pcd = pcds_offices[0]
+
+    
+And visualize them:
+
+::
+
+    o3d.visualization.draw_geometries([living_room_pcd])
+
+    
+|coreransac_living_room_pcd|
+
+    .. |coreransac_living_room_pcd| image:: ../../_static/images/coreransac_living_room_pcd.png
+
+::
+
+    o3d.visualization.draw_geometries([office_pcd])
+
+|coreransac_office_pcd|
+
+    .. |coreransac_office_pcd| image:: ../../_static/images/coreransac_office_pcd.png
 
 
-pcd_filename = "/home/scpmaotj/Lanverso/12-16-2022/free/p1.ply"
-pcd = o3d.io.read_point_cloud(pcd_filename)
-o3d.visualization.draw_geometries([pcd])
-pcd = remove_origin_points(pcd)
-o3d.visualization.draw_geometries([pcd])
-pcd_points = np.asarray(pcd.points, dtype="float32") 
-num_points = len(pcd_points)
-threshold = 2
-num_iterations = 30
-dict_results = crs.get_ransac_results(pcd_points, num_points, threshold, num_iterations)
-# dict_results = crscuda.get_ransac_results_cuda(pcd_points, num_points, threshold, num_iterations)
-inliers = dict_results["indices_inliers"]
-inlier_cloud = pcd.select_by_index(inliers)
-inlier_cloud.paint_uniform_color([1, 0, 0])
-outlier_cloud = pcd.select_by_index(inliers, invert=True)
-o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
+A brief explanation of the relationship between the functions defined here is given below:
+
+If we want to extract the best fitting plane from a pointcloud, we have to call the function :func:`get_ransac_plane_results`
+
+- :func:`get_np_array_of_two_random_points_from_np_array_of_points`: Returns two random points from a list of points.
+- :func:`get_np_array_of_three_random_points_from_np_array_of_points`: Returns three random points from a list of points.
+- :func:`get_how_many_below_threshold_between_line_and_points_and_their_indices`: Computes how many points are below a threshold distance from a line and returns their count and their indices.
+- :func:`get_how_many_below_threshold_between_plane_and_points_and_their_indices`: Computes how many points are below a threshold distance from a plane and returns their count and their indices.
+- :func:`get_pointcloud_from_indices`: Get a point cloud from a list of indices.
+- :func:`get_ransac_line_iteration_results`: Returns the results of one iteration of the RANSAC algorithm for line fitting.
+- :func:`get_ransac_iteration_results`: Returns the results of one iteration of the RANSAC algorithm for plane fitting.
+- :func:`get_ransac_results`: Computes the best plane that fits a collection of points and the indices of the inliers.
+
 '''
 
 import numpy as np
@@ -290,6 +337,8 @@ def get_ransac_iteration_results(points: np.ndarray, threshold: float, len_point
     :type threshold: float
     :param len_points: The number of points in the collection of points.
     :type len_points: Optional[int]
+    :param seed: The seed to initialize the random number generator.
+    :type seed: Optional[int]
     :return: A dictionary containing the current plane parameters, number of inliers, and their indices.
     :rtype: dict
     """
@@ -297,70 +346,76 @@ def get_ransac_iteration_results(points: np.ndarray, threshold: float, len_point
         len_points = len(points)
     if seed is not None:
         np.random.seed(seed)
-    current_random_points = get_np_array_of_three_random_points_from_np_array_of_points(points, len_points)
+    current_random_points = get_np_array_of_three_random_points_from_np_array_of_points(points, len_points, seed)
     current_plane = geom.get_plane_from_list_of_three_points(current_random_points.tolist())
     how_many_in_plane, current_point_indices = get_how_many_below_threshold_between_plane_and_points_and_their_indices(points, current_plane, threshold)
     # print(len_points, current_random_points, current_plane, how_many_in_plane)
     return {"current_random_points": current_random_points, "current_plane": current_plane, "threshold": threshold, "number_inliers": how_many_in_plane, "indices_inliers": current_point_indices}
     
 
-def get_ransac_results(points: np.ndarray, len_points: int, threshold: float, num_iterations: int) -> dict:
+def get_ransac_plane_results(points: np.ndarray, threshold: float, num_iterations: int, len_points:Optional[int]=None, seed: Optional[int] = None) -> dict:
     """
-    Computes the best plane that fits a collection of points and the indices of the inliers.
-    
-    :param points_x: X coordinates of the points.
-    :type points_x: np.ndarray
-    :param points_y: Y coordinates of the points.
-    :type points_y: np.ndarray
-    :param points_z: Z coordinates of the points.
-    :type points_z: np.ndarray
-    :param threshold: Maximum distance to the plane.
-    :type threshold: np.float32
-    :param num_iterations: Number of iterations to compute the best plane.
-    :type num_iterations: np.int64
-    :param random_points_indices_1: Indices of the points to use as first random point in each iteration.
-    :type random_points_indices_1: np.ndarray
-    :param random_points_indices_2: Indices of the points to use as second random point in each iteration.
-    :type random_points_indices_2: np.ndarray
-    :param random_points_indices_3: Indices of the points to use as third random point in each iteration.
-    :type random_points_indices_3: np.ndarray
-    :return: Best plane parameters and the indices of the points that fit the plane.
-    :rtype: Tuple[np.ndarray, np.ndarray]
+    Computes the **best plane** that fits a **collection of points** and the indices of the inliers.
+
+    This functions expects a **collection of points**, the **number of points** in the collection, the **maximum distance** from a point 
+    to the plane for it to be considered an inlier, and the **number of iterations** to run the RANSAC algorithm. 
+    It returns a **dictionary** containing the
+    **best plane parameters**, **number of inliers**, and **their indices**. The keys of the dictionary are **"best_plane"**, 
+    **"number_inliers"**, and
+    **"indices_inliers"**, respectively. The type of the values of the dictionary are **np.ndarray**, **int**, and **np.ndarray**, respectively. 
+    Reproducibility is enforced by setting the **seed** parameter to a fixed value.
+
+    :param points: The collection of points to fit the plane to.
+    :type points: np.ndarray
+    :param threshold: The maximum distance from a point to the plane for it to be considered an inlier.
+    :type threshold: float
+    :param num_iterations: The number of iterations to run the RANSAC algorithm.
+    :type num_iterations: int
+    :param len_points: The number of points in the collection of points.
+    :type len_points: Optional[int]
+    :param seed: The seed to initialize the random number generator.
+    :type seed: Optional[int]
+    :return: A dictionary containing the best plane parameters, number of inliers, and their indices.
+    :rtype: dict
 
     :Example:
 
     ::
 
-        >>> import customransac
+        >>> import mrdja.ransac.coreransac as coreransac
         >>> import open3d as o3d
         >>> import numpy as np
         >>> import random
-        >>> pcd_filename = "/tmp/Lantegi/Kubic.ply"
-        >>> pcd = o3d.io.read_point_cloud(pcd_filename)
-        >>> pcd_points = np.asarray(pcd.points, dtype="float32")
-        >>> num_points = len(pcd_points)
-        >>> pcd_points_x = pcd_points[:, 0]
-        >>> pcd_points_y = pcd_points[:, 1]
-        >>> pcd_points_z = pcd_points[:, 2]
+        >>> import open3d as o3d
+        >>> dataset = o3d.data.OfficePointClouds()
+        >>> pcds_offices = []
+        >>> for pcd_path in dataset.paths:
+        >>>     pcds_offices.append(o3d.io.read_point_cloud(pcd_path))
+        >>> office_pcd = pcds_offices[0]
+        >>> pcd_points = np.asarray(office_pcd.points)
         >>> threshold = 0.1
-        >>> num_iterations = 2
-        >>> list_num_points = list(range(num_points))
-        >>> random_points_indices_1 = np.array([], dtype="int64")
-        >>> random_points_indices_2 = np.array([], dtype="int64")
-        >>> random_points_indices_3 = np.array([], dtype="int64")
-        >>> for i in range(num_iterations):
-        >>>     random_points_indices = random.sample(list_num_points, 3)
-        >>>     random_points_indices_1 = np.append(random_points_indices_1, random_points_indices[0])
-        >>>     random_points_indices_2 = np.append(random_points_indices_2, random_points_indices[1])
-        >>>     random_points_indices_3 = np.append(random_points_indices_3, random_points_indices[2])
-        >>> plane_parameters, indices = customransac.get_best_plane_and_inliers(pcd_points_x, pcd_points_y, pcd_points_z, threshold, num_iterations, random_points_indices_1, random_points_indices_2, random_points_indices_3)
-        >>> plane_parameters
-        array([ 0.0012,  0.0012,  0.0012,  0.0012])
-        >>> inlier_cloud = pcd.select_by_index(inliers)
+        >>> num_iterations = 20
+        >>> dict_results = coreransac.get_ransac_plane_results(pcd_points, threshold, num_iterations, seed = 42)
+        >>> dict_results
+        >>> {'best_plane': array([-0.17535096,  0.45186984, -2.44615646,  5.69205427]),
+        >>> 'number_inliers': 153798,
+        >>> 'indices_inliers': array([     0,      1,      2, ..., 248476, 248477, 248478])}
+        >>> inliers = dict_results["indices_inliers"]
+        >>> inlier_cloud = office_pcd.select_by_index(inliers)
         >>> inlier_cloud.paint_uniform_color([1.0, 0, 0])
-        >>> outlier_cloud = pcd.select_by_index(inliers, invert=True)
+        >>> outlier_cloud = office_pcd.select_by_index(inliers, invert=True)
         >>> o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
+
+    |coreransac_get_ransac_plane_results_example|
+
+    .. |coreransac_get_ransac_plane_results_example| image:: ../../_static/images/coreransac_get_ransac_plane_results_example.png
+
+
     """
+    if len_points is None:
+        len_points = len(points)
+    if seed is not None:
+        np.random.seed(seed)
     best_plane = None
     number_points_in_best_plane = 0
     for _ in range(num_iterations):
