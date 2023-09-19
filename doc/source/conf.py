@@ -53,11 +53,15 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 # html_theme = 'classic'
+# options for "classic"
+# html_theme_options = {'body_max_width' : None}
 html_theme = "sphinx_rtd_theme" 
 # html_theme_options = {'nosidebar': True, 'body_max_width' : None}
+# options for "sphinx_rtd_theme"
 html_theme_options = {'body_max_width' : None, 'collapse_navigation' : False}
 # html_theme = 'alabaster'
 # html_theme = "sphinx_rtd_theme"
+
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

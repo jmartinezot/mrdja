@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Optional
 from scipy.linalg import svd
 import math
 
@@ -262,3 +262,102 @@ def get_angle_between_lines(l1, l2):
     print("Vector 1: ", v1)
     print("Vector 2: ", v2)
     return np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
+
+def get_intersection_points_of_line_with_cube(line: np.ndarray, cube_min: np.ndarray, cube_max: np.ndarray) -> List[np.ndarray]:
+    '''
+    Get the intersection points of a line with a cube.
+
+    :param line: Line described as two points.
+    :type line: np.ndarray
+    :param cube_min: Minimum point of the cube.
+    :type cube_min: np.ndarray
+    :param cube_max: Maximum point of the cube.
+    :type cube_max: np.ndarray
+    :return: Intersection points.
+    :rtype: List[np.ndarray]
+
+    :Example:
+
+    ::
+
+        >>> import mrdja.geometry as geom
+        >>> import numpy as np
+        >>> line = np.array([[0, 0, 0], [1, 1, 1]])
+        >>> cube_min = np.array([0, 0, 0])
+        >>> cube_max = np.array([2, 2, 2])
+        >>> intersection_points = geom.get_intersection_points_of_line_with_cube(line, cube_min, cube_max)
+        >>> intersection_points
+        [array([1., 1., 1.])]
+        >>> Draw the cube, the intersection points, and the line
+        >>> import matplotlib.pyplot as plt
+    '''
+    # Initialize an empty list to store intersection points.
+    intersection_points = []
+
+    # Define the planes representing the faces of the cube.
+    # Each plane is defined as (A, B, C, D), where Ax + By + Cz + D = 0.
+    # We'll calculate the six planes for the cube.
+    
+    # Plane equations for the cube faces (front, back, top, bottom, left, right).
+    planes = [
+        (1, 0, 0, -cube_min[0]),  # Front face
+        (-1, 0, 0, cube_max[0]),  # Back face
+        (0, 1, 0, -cube_min[1]),  # Top face
+        (0, -1, 0, cube_max[1]),  # Bottom face
+        (0, 0, 1, -cube_min[2]),  # Left face
+        (0, 0, -1, cube_max[2])   # Right face
+    ]
+
+    # Check for intersection with each plane.
+    for plane in planes:
+        intersection_point = get_intersection_point_of_line_with_plane(line, plane)
+        if intersection_point is not None:
+            # Check if the intersection point is within the bounds of the cube.
+            if all(cube_min <= intersection_point) and all(intersection_point <= cube_max):
+                intersection_points.append(intersection_point)
+
+    return intersection_points
+
+
+def get_intersection_point_of_line_with_plane(line: np.ndarray, plane: np.ndarray) -> Optional[np.ndarray]:
+    '''
+    Get the intersection point of a line with a plane. If it is parallel, return None.
+
+    :param line: Line described as two points.
+    :type line: np.ndarray
+    :param plane: Plane described as Ax + By + Cz + D = 0.
+    :type plane: np.ndarray
+    :return: Intersection point.
+    :rtype: Optional[np.ndarray]
+
+    :Example:
+
+    ::
+
+        >>> import mrdja.geometry as geom
+        >>> import numpy as np 
+        >>> import mrdja.drawing as drawing
+        >>> line = np.array([[0, 0, 0], [1, 1, 1]])
+        >>> plane = np.array([0, 0, 1, -3])
+        >>> intersection_point = geom.get_intersection_point_of_line_with_plane(line, plane)
+        array([3., 3., 3.])
+        >>> drawing.draw_line_extension_to_plane(line, plane)
+
+    '''
+    # Step 1: Calculate the direction vector of the line.
+    direction = line[1] - line[0]
+    
+    # Step 2: Calculate the normal vector of the plane.
+    normal = plane[:3]
+    
+    # Step 3: Check if the line is parallel to the plane.
+    dot_product = np.dot(direction, normal)
+    if np.isclose(dot_product, 0, atol=1e-6):
+        return None
+    
+    # Step 4: Calculate the parameter t for the line's equation.
+    t = - (np.dot(normal, line[0]) + plane[3]) / dot_product
+    
+    # Step 5: Calculate the intersection point.
+    intersection_point = line[0] + t * direction
+    return intersection_point

@@ -1,5 +1,5 @@
 '''
-We only work with **RANSAC** for finding geometric primitives in point clouds. These primitives are **planes** and **lines**.
+**RANSAC** core functions for finding geometric primitives (**planes** and **lines**) in point clouds.
 
 In this module all the functions related to the **RANSAC** algorithm for **planes** and **lines** are defined.
 
@@ -73,16 +73,10 @@ And visualize them:
 
 A brief explanation of the relationship between the functions defined here is given below:
 
-If we want to extract the best fitting plane from a pointcloud, we have to call the function :func:`get_ransac_plane_results`
-
-- :func:`get_np_array_of_two_random_points_from_np_array_of_points`: Returns two random points from a list of points.
-- :func:`get_np_array_of_three_random_points_from_np_array_of_points`: Returns three random points from a list of points.
-- :func:`get_how_many_below_threshold_between_line_and_points_and_their_indices`: Computes how many points are below a threshold distance from a line and returns their count and their indices.
-- :func:`get_how_many_below_threshold_between_plane_and_points_and_their_indices`: Computes how many points are below a threshold distance from a plane and returns their count and their indices.
-- :func:`get_pointcloud_from_indices`: Get a point cloud from a list of indices.
-- :func:`get_ransac_line_iteration_results`: Returns the results of one iteration of the RANSAC algorithm for line fitting.
-- :func:`get_ransac_iteration_results`: Returns the results of one iteration of the RANSAC algorithm for plane fitting.
-- :func:`get_ransac_results`: Computes the best plane that fits a collection of points and the indices of the inliers.
+If we want to extract the best fitting plane from a pointcloud, we have to call the function :func:`get_ransac_plane_results`, which, given
+a pointcloud, the maximum distance from a point to the plane for it to be considered an inlier, and the number of iterations to run the RANSAC algorithm,
+returns the best plane parameters, the number of inliers, and their indices. It calls the function :func:`get_ransac_plane_iteration_results` to get the results
+of each iteration of the RANSAC algorithm. 
 
 '''
 
@@ -90,102 +84,19 @@ import numpy as np
 import open3d as o3d
 import math
 import mrdja.ransac.coreransacutils as crsu
+import mrdja.sampling as sampling
 from typing import Optional, List, Tuple, Dict, Union
 import mrdja.geometry as geom
-
-def get_np_array_of_two_random_points_from_np_array_of_points(points: np.ndarray, repetitions: int=1, num_points: Optional[int] = None, seed: Optional[int] = None) -> np.ndarray:
-    """
-    Returns two random points from a list of points.
-
-    :param points: Points.
-    :type points: np.ndarray
-    :param num_points: Number of points.
-    :type num_points: Optional[int]
-    :return: Three random points.
-    :rtype: np.ndarray
-
-    :Example:
-
-    ::
-
-        >>> import coreransac
-        >>> import numpy as np
-        >>> points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
-        >>> points
-        array([[0, 0, 0],
-               [1, 0, 0],
-               [0, 1, 0]])
-        >>> random_points = coreransac.get_three_random_points(points)
-        >>> random_points
-        array([[1, 0, 0],
-               [0, 1, 0],
-               [0, 0, 0]])
-    """
-    if num_points is None:
-        num_points = len(points)
-    if seed is not None:
-        np.random.seed(seed)
-    random_points_indices = np.random.choice(range(num_points), size= 2 * repetitions, replace=False)
-    random_points = points[random_points_indices]
-    # create a list of pairs of points from the array random_points
-    random_points = random_points.reshape(repetitions, 2, 3)
-    return random_points
-
-def get_np_array_of_three_random_points_from_np_array_of_points(points: np.ndarray, num_points: Optional[int] = None, seed: Optional[int] = None) -> np.ndarray:
-    """
-    Returns three random points from a list of points.
-
-    :param points: Points.
-    :type points: np.ndarray
-    :param num_points: Number of points.
-    :type num_points: Optional[int]
-    :return: Three random points.
-    :rtype: np.ndarray
-
-    :Example:
-
-    ::
-
-        >>> import coreransac
-        >>> import numpy as np
-        >>> points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
-        >>> points
-        array([[0, 0, 0],
-               [1, 0, 0],
-               [0, 1, 0]])
-        >>> random_points = coreransac.get_three_random_points(points)
-        >>> random_points
-        array([[1, 0, 0],
-               [0, 1, 0],
-               [0, 0, 0]])
-    """
-    if num_points is None:
-        num_points = len(points)
-    if seed is not None:
-        np.random.seed(seed)
-    random_points_indices = np.random.choice(range(num_points), 3, replace=False)
-    random_points = points[random_points_indices]
-    return random_points
 
 def get_how_many_below_threshold_between_line_and_points_and_their_indices(points: np.ndarray, line_two_points: np.ndarray, threshold: np.float32) -> Tuple[int, np.ndarray]:
     """
     Computes how many points are below a threshold distance from a line and returns their count and their indices.
 
-    :param a: A parameter of the plane.
-    :type a: np.float32
-    :param b: B parameter of the plane.
-    :type b: np.float32
-    :param c: C parameter of the plane.
-    :type c: np.float32
-    :param d: D parameter of the plane.
-    :type d: np.float32
-    :param points_x: X coordinates of the points.
-    :type points_x: np.ndarray
-    :param points_y: Y coordinates of the points.
-    :type points_y: np.ndarray
-    :param points_z: Z coordinates of the points.
-    :type points_z: np.ndarray
-    :param threshold: Maximum distance to the plane.
+    :param points: The collection of points to measure the distance to the line.
+    :type points: np.ndarray
+    :param line_two_points: Two points defining the line.
+    :type line_two_points: np.ndarray
+    :param threshold: Maximum distance to the line.
     :type threshold: np.float32
     :return: Number of points below the threshold distance as their indices.
     :rtype: Tuple[int, np.ndarray]
@@ -194,18 +105,52 @@ def get_how_many_below_threshold_between_line_and_points_and_their_indices(point
 
     ::
 
-        >>> import customransac
-        >>> plane = np.array([1,1,1,1], dtype="float32")
-        >>> points = [[-1, -1, -1], [0, 0, 0], [1, 1, 1], [2, 2, 2]]
-        >>> points_x = np.array([p[0] for p in points], dtype="float32")
-        >>> points_y = np.array([p[1] for p in points], dtype="float32")
-        >>> points_z = np.array([p[2] for p in points], dtype="float32")
+        >>> import mrdja.ransac.coreransac as coreransac
+        >>> import mrdja.drawing as drawing
+        >>> import numpy as np
+        >>> import matplotlib.pyplot as plt
+        >>> line = np.array([[0, 0, 0], [1, 1, 1]])
+        >>> points = np.array([[-1, -1, -1], [0, 0, 0], [1, 1, 1], [2, 2, 2], [2, 2, 3], [2, 2, 4]])
         >>> threshold = 1
-        >>> count, indices = customransac.get_how_many_below_threshold_between_plane_and_points_and_indices(plane[0], plane[1], plane[2], plane[3], points_x, points_y, points_z, threshold)
+        >>> count, indices_below = coreransac.get_how_many_below_threshold_between_line_and_points_and_their_indices(points, line, threshold)
         >>> count
-        1
-        >>> indices
-        array([1])
+        5
+        >>> indices_below
+        array([0, 1, 2, 3, 4])
+        >>> points[indices_below]
+        array([[-1, -1, -1],
+        [ 0,  0,  0],
+        [ 1,  1,  1],
+        [ 2,  2,  2],
+        [ 2,  2,  3]])
+
+        >>> # Calculate the minimum and maximum points of the cube.
+        >>> cube_min = np.min(points, axis=0)
+        >>> cube_max = np.max(points, axis=0)
+
+
+        >>> # Extend the line to the cube limits.
+        >>> extended_line = drawing.extend_line_to_cube_limits(line, cube_min, cube_max)
+
+        >>> # Get the indices of the points above the threshold
+        >>> all_indices = np.arange(len(points))
+        >>> indices_above = np.setdiff1d(all_indices, indices_below)
+        >>> # Create a 3D scatter plot
+        >>> fig = plt.figure()
+        >>> ax = fig.add_subplot(111, projection='3d')
+        >>> # Plot the points below the threshold in red
+        >>> ax.scatter(points[indices_below, 0], points[indices_below, 1], points[indices_below, 2], c='red', label='Below Threshold')
+        >>> # Plot the points above the threshold in blue
+        >>> ax.scatter(points[indices_above, 0], points[indices_above, 1], points[indices_above, 2], c='blue', label='Above Threshold')
+
+        >>> # Plot the extended line in green
+        >>> ax.plot(extended_line[:, 0], extended_line[:, 1], extended_line[:, 2], color='green', label='Line')
+        >>> ax.set_xlabel('X')
+        >>> ax.set_ylabel('Y')
+        >>> ax.set_zlabel('Z')
+        >>> ax.legend()
+        >>> plt.show()
+
     """
     B = line_two_points[0]
     C = line_two_points[1]
@@ -225,21 +170,11 @@ def get_how_many_below_threshold_between_plane_and_points_and_their_indices(poin
     """
     Computes how many points are below a threshold distance from a plane and returns their count and their indices.
 
-    :param a: A parameter of the plane.
-    :type a: np.float32
-    :param b: B parameter of the plane.
-    :type b: np.float32
-    :param c: C parameter of the plane.
-    :type c: np.float32
-    :param d: D parameter of the plane.
-    :type d: np.float32
-    :param points_x: X coordinates of the points.
-    :type points_x: np.ndarray
-    :param points_y: Y coordinates of the points.
-    :type points_y: np.ndarray
-    :param points_z: Z coordinates of the points.
-    :type points_z: np.ndarray
-    :param threshold: Maximum distance to the plane.
+    :param points: The collection of points to measure the distance to the line.
+    :type points: np.ndarray
+    :param plane: Four parameters defining the plane in the form Ax + By + Cz + D = 0.
+    :type plane: np.ndarray
+    :param threshold: Maximum distance to the line.
     :type threshold: np.float32
     :return: Number of points below the threshold distance as their indices.
     :rtype: Tuple[int, np.ndarray]
@@ -248,18 +183,18 @@ def get_how_many_below_threshold_between_plane_and_points_and_their_indices(poin
 
     ::
 
-        >>> import customransac
-        >>> plane = np.array([1,1,1,1], dtype="float32")
-        >>> points = [[-1, -1, -1], [0, 0, 0], [1, 1, 1], [2, 2, 2]]
-        >>> points_x = np.array([p[0] for p in points], dtype="float32")
-        >>> points_y = np.array([p[1] for p in points], dtype="float32")
-        >>> points_z = np.array([p[2] for p in points], dtype="float32")
+        >>> import mrdja.ransac.coreransac as coreransac
+        >>> import numpy as np
+        >>> plane = np.array([1, 1, 1, 0])
+        >>> points = np.array([[-1, -1, -1], [0, 0, 0], [1, 1, 1], [2, 2, 2], [2, 2, 3], [2, 2, 4]])
         >>> threshold = 1
-        >>> count, indices = customransac.get_how_many_below_threshold_between_plane_and_points_and_indices(plane[0], plane[1], plane[2], plane[3], points_x, points_y, points_z, threshold)
+        >>> count, indices = coreransac.get_how_many_below_threshold_between_plane_and_points_and_their_indices(points, plane, threshold)
         >>> count
         1
         >>> indices
         array([1])
+        >>> points[indices]
+        array([[0, 0, 0]])
     """
     a = plane[0]
     b = plane[1]
@@ -276,32 +211,6 @@ def get_how_many_below_threshold_between_plane_and_points_and_their_indices(poin
     # point_indices = np.where(distance <= optimized_threshold)[0]
     indices_inliers = np.array([index for index, value in enumerate(distance) if value <= optimized_threshold], dtype=np.int64)
     return len(indices_inliers), indices_inliers
-
-def get_pointcloud_from_indices(pcd: o3d.geometry.PointCloud, indices: np.ndarray) -> o3d.geometry.PointCloud:
-    """
-    Get a point cloud from a list of indices.
-    
-    :param pcd: Point cloud.
-    :type pcd: open3d.geometry.PointCloud
-    :param indices: Indices.
-    :type indices: np.ndarray
-    :return: Point cloud.
-    :rtype: open3d.geometry.PointCloud
-
-    :Example:
-
-    ::
-
-        >>> import open3d as o3d
-        >>> import customransac
-        >>> pcd = o3d.io.read_point_cloud("tests/data/fragment.ply")
-        >>> indices = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        >>> pcd = customransac.get_pointcloud_from_indices(pcd, indices)
-        >>> len(pcd.points)
-        10
-    """
-    pcd = pcd.select_by_index(indices)
-    return pcd
 
 def get_ransac_line_iteration_results(points: np.ndarray, threshold: float, len_points:Optional[int]=None, seed: Optional[int]=None) -> dict:
     """
@@ -320,16 +229,22 @@ def get_ransac_line_iteration_results(points: np.ndarray, threshold: float, len_
         len_points = len(points)
     if seed is not None:
         np.random.seed(seed)
-    current_random_points = get_np_array_of_two_random_points_from_np_array_of_points(points, len_points)
+    current_random_points = sampling.sampling_np_arrays_from_enumerable(points, cardinality_of_np_arrays=2, number_of_np_arrays=1, num_source_elems=len_points, seed=seed)[0]
     current_line = current_random_points # the easiest way to get the line parameters
     how_many_in_line, current_point_indices = get_how_many_below_threshold_between_line_and_points_and_their_indices(points, current_line, threshold)
     # print(len_points, current_random_points, current_plane, how_many_in_plane)
     return {"current_random_points": current_random_points, "current_line": current_line, "threshold": threshold, "number_inliers": how_many_in_line, "indices_inliers": current_point_indices}
 
 
-def get_ransac_iteration_results(points: np.ndarray, threshold: float, len_points:Optional[int]=None, seed: Optional[int]=None) -> dict:
+def get_ransac_plane_iteration_results(points: np.ndarray, threshold: float, len_points:Optional[int]=None, seed: Optional[int]=None) -> dict:
     """
     Returns the results of one iteration of the RANSAC algorithm for plane fitting.
+
+    This functions expects a **collection of points**, the **number of points** in the collection, the **maximum distance** from a point
+    to the plane for it to be considered an inlier, and the **seed** to initialize the random number generator.
+    It returns a dictionary containing the **current plane parameters**, **number of inliers**, and **their indices**. The keys of the dictionary
+    are **current_random_points**, **"current_plane"**, **"threshold"**, **"number_inliers"**, and **"indices_inliers"**, respectively. 
+    The type of the values of the dictionary are **np.ndarray**, **np.ndarray**, **float**, **int**, and **np.ndarray**, respectively.
     
     :param points: The collection of points to fit the plane to.
     :type points: np.ndarray
@@ -339,14 +254,51 @@ def get_ransac_iteration_results(points: np.ndarray, threshold: float, len_point
     :type len_points: Optional[int]
     :param seed: The seed to initialize the random number generator.
     :type seed: Optional[int]
-    :return: A dictionary containing the current plane parameters, number of inliers, and their indices.
+    :return: A dictionary containing the current plane parameters, number of inliers, and their indices, as well as the three random points sampled to create the plane.
     :rtype: dict
+
+    :Example:
+
+    ::
+
+        >>> import mrdja.ransac.coreransac as coreransac
+        >>> import open3d as o3d
+        >>> import numpy as np
+        >>> import random
+        >>> import open3d as o3d
+        >>> dataset = o3d.data.OfficePointClouds()
+        >>> pcds_offices = []
+        >>> for pcd_path in dataset.paths:
+        >>>     pcds_offices.append(o3d.io.read_point_cloud(pcd_path))
+        >>> office_pcd = pcds_offices[0]
+        >>> pcd_points = np.asarray(office_pcd.points)
+        >>> threshold = 0.1
+        >>> num_iterations = 20
+        >>> dict_results = coreransac.get_ransac_plane_iteration_results(pcd_points, threshold, seed = 42)
+        >>> dict_results
+        >>> {'current_random_points': array([[1.61072648, 1.83984375, 1.91796875],
+        >>> [3.00390625, 2.68674755, 2.01953125],
+        >>> [2.10068583, 2.34765625, 2.14453125]]),
+        >>> 'current_plane': array([ 0.14030194, -0.2658808 ,  0.29252566, -0.297864  ]),
+        >>> 'threshold': 0.1,
+        >>> 'number_inliers': 34283,
+        >>> 'indices_inliers': array([ 98356, 101924, 101956, ..., 271055, 271245, 271246])}
+        >>> inliers = dict_results["indices_inliers"]
+        >>> inlier_cloud = office_pcd.select_by_index(inliers)
+        >>> inlier_cloud.paint_uniform_color([1.0, 0, 0])
+        >>> outlier_cloud = office_pcd.select_by_index(inliers, invert=True)
+        >>> o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
+
+    |coreransac_get_ransac_plane_iteration_results_example|
+
+    .. |coreransac_get_ransac_plane_iteration_results_example| image:: ../../_static/images/coreransac_get_ransac_plane_iteration_results_example.png
+
     """
     if len_points is None:
         len_points = len(points)
     if seed is not None:
         np.random.seed(seed)
-    current_random_points = get_np_array_of_three_random_points_from_np_array_of_points(points, len_points, seed)
+    current_random_points = sampling.sampling_np_arrays_from_enumerable(points, cardinality_of_np_arrays=3, number_of_np_arrays=1, num_source_elems=len_points, seed=seed)[0]
     current_plane = geom.get_plane_from_list_of_three_points(current_random_points.tolist())
     how_many_in_plane, current_point_indices = get_how_many_below_threshold_between_plane_and_points_and_their_indices(points, current_plane, threshold)
     # print(len_points, current_random_points, current_plane, how_many_in_plane)
@@ -419,7 +371,7 @@ def get_ransac_plane_results(points: np.ndarray, threshold: float, num_iteration
     best_plane = None
     number_points_in_best_plane = 0
     for _ in range(num_iterations):
-        dict_results = get_ransac_iteration_results(points, threshold, len_points)
+        dict_results = get_ransac_plane_iteration_results(points, threshold, len_points)
         current_plane = dict_results["current_plane"]
         how_many_in_plane = dict_results["number_inliers"]
         current_indices_inliers = dict_results["indices_inliers"]
