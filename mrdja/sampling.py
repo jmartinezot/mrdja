@@ -138,6 +138,11 @@ def __sample_point_circle_3d_rejection(radius=1, center=np.array([0, 0, 0]), nor
         # Check if the projected point lies within the circle
         if np.linalg.norm(projected_point - center) <= radius:
             return projected_point
+        
+def __sample_point_circle_3d_rejection(n_samples: int = 1, radius: float = 1.0, center: np.ndarray =np.array([0, 0, 0]), normal: np.ndarray=np.array([0, 0, 1])) -> np.ndarray:
+    '''
+    
+    '''
 
 def sampling_circle_3d_rejection(n_samples, radius=1, center=np.array([0, 0, 0]), normal=np.array([0, 0, 1])):
     samples = [__sample_point_circle_3d_rejection(radius, center, normal) for _ in range(n_samples)]

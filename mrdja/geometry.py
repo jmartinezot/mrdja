@@ -281,15 +281,16 @@ def get_intersection_points_of_line_with_cube(line: np.ndarray, cube_min: np.nda
     ::
 
         >>> import mrdja.geometry as geom
+        >>> import mrdja.drawing as drawing
         >>> import numpy as np
         >>> line = np.array([[0, 0, 0], [1, 1, 1]])
-        >>> cube_min = np.array([0, 0, 0])
-        >>> cube_max = np.array([2, 2, 2])
+        >>> cube_min = np.array([-2, -2, -1])
+        >>> cube_max = np.array([1, 2, 2])
         >>> intersection_points = geom.get_intersection_points_of_line_with_cube(line, cube_min, cube_max)
         >>> intersection_points
-        [array([1., 1., 1.])]
+        [array([1., 1., 1.]), array([-1., -1., -1.])]
         >>> Draw the cube, the intersection points, and the line
-        >>> import matplotlib.pyplot as plt
+        >>> drawing.draw_cube(cube_min, cube_max)
     '''
     # Initialize an empty list to store intersection points.
     intersection_points = []
@@ -312,9 +313,11 @@ def get_intersection_points_of_line_with_cube(line: np.ndarray, cube_min: np.nda
     for plane in planes:
         intersection_point = get_intersection_point_of_line_with_plane(line, plane)
         if intersection_point is not None:
-            # Check if the intersection point is within the bounds of the cube.
-            if all(cube_min <= intersection_point) and all(intersection_point <= cube_max):
-                intersection_points.append(intersection_point)
+            # Check if the intersection point is not already in the list.
+            if not any(np.allclose(intersection_point, point) for point in intersection_points):
+                # Check if the intersection point is within the bounds of the cube.
+                if all(cube_min <= intersection_point) and all(intersection_point <= cube_max):
+                    intersection_points.append(intersection_point)
 
     return intersection_points
 
@@ -340,8 +343,13 @@ def get_intersection_point_of_line_with_plane(line: np.ndarray, plane: np.ndarra
         >>> line = np.array([[0, 0, 0], [1, 1, 1]])
         >>> plane = np.array([0, 0, 1, -3])
         >>> intersection_point = geom.get_intersection_point_of_line_with_plane(line, plane)
+        >>> intersection_point
         array([3., 3., 3.])
         >>> drawing.draw_line_extension_to_plane(line, plane)
+
+    |drawing_draw_line_extension_to_plane_example|
+
+    .. |drawing_draw_line_extension_to_plane_example| image:: ../../_static/images/drawing_draw_line_extension_to_plane_example.png
 
     '''
     # Step 1: Calculate the direction vector of the line.
@@ -361,3 +369,39 @@ def get_intersection_point_of_line_with_plane(line: np.ndarray, plane: np.ndarra
     # Step 5: Calculate the intersection point.
     intersection_point = line[0] + t * direction
     return intersection_point
+
+def get_two_perpendicular_unit_vectors_in_plane(plane: np.ndarray) -> Tuple[np.ndarray, np.ndarray]: 
+    '''
+    Get two perpendicular unit vectors in a plane.
+
+    :param plane: Plane described as Ax + By + Cz + D = 0.
+    :type plane: np.ndarray
+    :return: Two perpendicular unit vectors in the plane.
+    :rtype: Tuple[np.ndarray, np.ndarray]
+
+    :Example:
+
+    ::
+
+        >>> import mrdja.geometry as geom
+        >>> import numpy as np
+        >>> plane = np.array([0, 0, 1, -3])
+        >>> perpendicular1, perpendicular2 = geom.get_two_perpendicular_unit_vectors_in_plane(plane)
+        >>> perpendicular1
+        array([0., 1., 0.])
+        >>> perpendicular2
+        array([-1., 0., 0.])
+    '''
+    # Step 1: Calculate the normal vector of the plane.
+    normal = plane[:3]
+    # Step 2: Calculate the first perpendicular vector.
+    if normal[0] == 0 and normal[1] == 0:
+        perpendicular1 = np.array([0, 1, 0])
+    else:
+        perpendicular1 = np.array([normal[1], -normal[0], 0])
+    # Step 3: Calculate the second perpendicular vector.
+    perpendicular2 = np.cross(normal, perpendicular1)
+    # Step 4: Normalize the vectors.
+    perpendicular1 = perpendicular1 / np.linalg.norm(perpendicular1)
+    perpendicular2 = perpendicular2 / np.linalg.norm(perpendicular2)
+    return perpendicular1, perpendicular2
