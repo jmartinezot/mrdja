@@ -106,10 +106,10 @@ def get_parallelogram_2d_vertices(center: List[float], normal1: List[float], nor
     vertex4 = center + normal1 * length1 / 2 - normal2 * length2 / 2
     return [vertex1, vertex2, vertex3, vertex4]
 
-def get_parallelogram_3d_vertices(center: List[float], normal1: List[float], normal2: List[float], normal3: List[float], 
+def get_parallelepiped_3d_vertices(center: List[float], normal1: List[float], normal2: List[float], normal3: List[float], 
                                   length1: float, length2: float, length3: float)-> List[List[float]]:
     '''
-    Get vertices of parallelogram, given center, normal vectors, and lengths.
+    Get vertices of parallelepiped, given center, normal vectors, and lengths.
 
     :param center: Center.
     :type center: List[float]
@@ -117,6 +117,8 @@ def get_parallelogram_3d_vertices(center: List[float], normal1: List[float], nor
     :type normal1: List[float]
     :param normal2: Normal vector 2.
     :type normal2: List[float]
+    :param normal3: Normal vector 3.
+    :type normal3: List[float]
     :param length1: Length 1.
     :type length1: float
     :param length2: Length 2.
@@ -144,6 +146,38 @@ def get_parallelogram_3d_vertices(center: List[float], normal1: List[float], nor
     vertex7 = center - normal1 * length1 / 2 - normal2 * length2 / 2 - normal3 * length3 / 2
     vertex8 = center + normal1 * length1 / 2 - normal2 * length2 / 2 - normal3 * length3 / 2
     return [vertex1, vertex2, vertex3, vertex4, vertex5, vertex6, vertex7, vertex8]
+
+def get_parallelogram_3d_vertices(center: List[float], normal1: List[float], normal2: List[float],  
+                                  length1: float, length2: float)-> List[List[float]]:
+    '''
+    Get vertices of parallelogram, given center, normal vectors, and lengths.
+
+    :param center: Center.
+    :type center: List[float]
+    :param normal1: Normal vector 1.
+    :type normal1: List[float]
+    :param normal2: Normal vector 2.
+    :type normal2: List[float]
+    :param length1: Length 1.
+    :type length1: float
+    :param length2: Length 2.
+    :type length2: float
+    :return: Vertices.
+    :rtype: List[List[float]]
+
+    :Example:
+
+    ::
+    '''
+    center = np.array(center)
+    normal1 = np.array(normal1)
+    normal2 = np.array(normal2)
+    vertex1 = center + normal1 * length1 / 2 + normal2 * length2 / 2
+    vertex2 = center - normal1 * length1 / 2 + normal2 * length2 / 2
+    vertex3 = center - normal1 * length1 / 2 - normal2 * length2 / 2
+    vertex4 = center + normal1 * length1 / 2 - normal2 * length2 / 2
+
+    return [vertex1, vertex2, vertex3, vertex4]
 
 def get_plane_equation(normal1, normal2, point):
     normal1 = np.array(normal1)

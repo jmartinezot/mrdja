@@ -124,8 +124,23 @@ def sampling_circle_2d(n_samples:int=1, center:Tuple[float, float]=(0,0), radius
     samples = [__sample_point_circle_2d(center, radius) for _ in range(n_samples)]
 
     return samples
+        
+def __sample_point_circle_3d(radius: float = 1.0, center: np.ndarray =np.array([0, 0, 0]), normal: np.ndarray=np.array([0, 0, 1])) -> np.ndarray:
+    '''
+    Sample a point from a 3D circle using the rejection sampling method.
 
-def __sample_point_circle_3d_rejection(radius=1, center=np.array([0, 0, 0]), normal=np.array([0, 0, 1])):
+    :param radius: The radius of the circle.
+    :type radius: float
+    :param center: The center of the circle.
+    :type center: np.ndarray
+    :param normal: The normal vector of the plane on which the circle lies.
+    :type normal: np.ndarray
+    :return: A list of tuples (x, y, z) representing the coordinates of the sampled points.
+    :rtype: List[Tuple[float, float, float]]
+
+    .. note:: The samples are uniformly distributed on the circle.
+    
+    '''
     normal = normal / np.linalg.norm(normal)
     
     while True:
@@ -138,14 +153,121 @@ def __sample_point_circle_3d_rejection(radius=1, center=np.array([0, 0, 0]), nor
         # Check if the projected point lies within the circle
         if np.linalg.norm(projected_point - center) <= radius:
             return projected_point
-        
-def __sample_point_circle_3d_rejection(n_samples: int = 1, radius: float = 1.0, center: np.ndarray =np.array([0, 0, 0]), normal: np.ndarray=np.array([0, 0, 1])) -> np.ndarray:
-    '''
-    
-    '''
 
-def sampling_circle_3d_rejection(n_samples, radius=1, center=np.array([0, 0, 0]), normal=np.array([0, 0, 1])):
-    samples = [__sample_point_circle_3d_rejection(radius, center, normal) for _ in range(n_samples)]
+
+def sampling_circle_3d(n_samples, radius: float = 1.0, center: np.ndarray =np.array([0, 0, 0]), 
+                        normal: np.ndarray=np.array([0, 0, 1]), seed: Optional[int]=None) -> List[np.ndarray]:
+    '''
+    Sample a n_samples number of points from a 3D circle using the rejection sampling method.
+
+    :param n_samples: The number of samples to generate.
+    :type n_samples: int
+    :param radius: The radius of the circle.
+    :type radius: float
+    :param center: The center of the circle.
+    :type center: np.ndarray
+    :param normal: The normal vector of the plane on which the circle lies.
+    :type normal: np.ndarray
+    :return: A list of tuples (x, y, z) representing the coordinates of the sampled points.
+    :rtype: List[Tuple[float, float, float]]
+
+    .. note:: The samples are uniformly distributed on the circle.
+
+    :Example:
+
+    ::
+
+    Sample 100 points from a circle in an arbitrary position and with arbitrary normal vector:
+
+    Required imports:
+    
+    >>> import mrdja.sampling as sampling
+    >>> import mrdja.geometry as geometry
+    >>> import matplotlib.pyplot as plt
+    >>> import numpy as np
+
+    Define the parameters of the circle and the number of points to sample:
+
+    >>> n_samples = 100
+    >>> radius = 5
+    >>> center = (1, 2, 0)
+    >>> normal = (1, 1, 0)
+
+    Sample the points:
+
+    >>> samples = sampling.sampling_circle_3d(n_samples=n_samples, radius=radius, center=center, normal=normal, seed=42)
+    >>> # list the first 5 samples
+    >>> samples[:5]
+    [array([ 5.49704795,  0.79717701, -1.89995698]),
+    array([ 2.08946069, -0.23201046, -1.10715705]),
+    array([0.76876017, 3.88915402, 0.70679795]),
+    array([ 6.26538718,  2.30865317, -1.65224467]),
+    array([ 4.37123134, -0.27120202, -1.88081112])]
+
+    Plot the 3D circle and the samples:
+
+    >>> samples = np.array(samples)
+    >>> fig = plt.figure()
+    >>> ax = fig.add_subplot(111, projection='3d')
+    >>> ax.scatter(samples[:, 0], samples[:, 1], samples[:, 2])
+    >>> # create title from n_samples, center, and radius, using fstring
+    >>> title = (f'{n_samples} Samples on a 3D circle with normal vector {normal}, '
+    >>>         f'center {center} and radius {radius}')
+    >>> ax.set_title(title)
+    >>> # Draw the circle
+    >>> vertices = geometry.get_parallelogram_3d_vertices(center, normal1, normal2, length1, length2)
+    >>> # Define the edges of the 3d parallelogram
+    >>> edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
+    >>> # Plot the edges
+    >>> for edge in edges:
+    >>>     ax.plot([vertices[edge[0]][0], vertices[edge[1]][0]],
+    >>>         [vertices[edge[0]][1], vertices[edge[1]][1]],
+    >>>         [vertices[edge[0]][2], vertices[edge[1]][2]], color='red')
+    >>> # Draw the normals at a quarter of their corresponding length
+    >>> quarter_length1 = length1 / 4
+    >>> quarter_length2 = length2 / 4
+    >>> arrow_length1 = quarter_length1 / 2
+    >>> arrow_length2 = quarter_length2 / 2
+    >>> ax.quiver(center[0], center[1], center[2], normal1[0], normal1[1], normal1[2], length=arrow_length1, normalize=False, color='red')
+    >>> ax.quiver(center[0], center[1], center[2], normal2[0], normal2[1], normal2[2], length=arrow_length2, normalize=False, color='red')
+    >>> ax.set_xlabel('X')
+    >>> ax.set_ylabel('Y')
+    >>> ax.set_zlabel('Z')
+    >>> plt.show()
+
+        Plot the samples:
+    
+    >>> fig, ax = plt.subplots()
+    >>> xlim_min = center[0] - radius
+    >>> xlim_max = center[0] + radius
+    >>> ylim_min = center[1] - radius
+    >>> ylim_max = center[1] + radius
+    >>> graph_limits = geometry.get_limits_of_graph_from_limits_of_object(xlim_min, xlim_max, ylim_min, ylim_max)
+    >>> ax.set_xlim(graph_limits[0], graph_limits[1])  # Set x-axis limits
+    >>> ax.set_ylim(graph_limits[2], graph_limits[3]*1.1)  # Set y-axis limits
+    >>> ax.scatter(*zip(*samples))
+    >>> ax.set_aspect('equal')
+    >>> # create title from n_samples, center, and radius, using f-string
+    >>> title = (f'{n_samples} Samples on a Circle with Center {center} and Radius {radius}')
+    >>> ax.set_title(title)
+    >>> # draw also the circle in red
+    >>> circle = plt.Circle(center, radius, color='r', fill=False)
+    >>> ax.add_artist(circle)
+    >>> # draw the X and Y axes in dotted lines
+    >>> ax.axhline(0, linestyle='dotted', color='black')
+    >>> ax.axvline(0, linestyle='dotted', color='black')
+    >>> ax.set_xlabel('X')
+    >>> ax.set_ylabel('Y')
+    >>> plt.show()
+
+    |sampling_parallelogram_3d|
+
+    .. |sampling_parallelogram_3d| image:: ../../_static/images/sampling_parallelogram_3d.png
+
+    '''
+    if seed is not None:
+        random.seed(seed)
+    samples = [__sample_point_circle_3d(radius, center, normal) for _ in range(n_samples)]
     return samples
 
 def __sample_point_parallelogram_2d(normal1: Tuple[float, float], normal2: Tuple[float, float], center: Tuple[float, float], length1: float, length2: float) -> Tuple[float, float]:
@@ -403,25 +525,51 @@ def sampling_alligned_parallelogram_2d(n_samples: int, min_x: float, max_x: floa
     return samples
 
 def __sample_point_parallelogram_3d(normal1: Tuple[float, float, float], normal2: Tuple[float, float, float], 
-                                  normal3: Tuple[float, float, float], center: Tuple[float, float, float], 
-                                  length1: float, length2: float, length3: float) -> Tuple[float, float, float]:
+                                  center: Tuple[float, float, float], length1: float, length2: float) -> Tuple[float, float, float]:
     '''
-    Sample a point from a parallelogram with sides parallel to the vectors normal1, normal2 and normal3.
+    Sample a point from a parallelogram with sides parallel to the vectors normal1 and normal2.
 
     :param normal1: Tuple[float, float, float]
         The first vector normal to the sides of the parallelogram.
     :param normal2: Tuple[float, float, float]
         The second vector normal to the sides of the parallelogram.
-    :param normal3: Tuple[float, float, float]
-        The third vector normal to the sides of the parallelogram.
     :param center: Tuple[float, float, float]
         The center of the parallelogram.
     :param length1: float
         The length of the first side of the parallelogram.
     :param length2: float
         The length of the second side of the parallelogram.    
+    :return: Tuple[float, float, float]
+        A tuple (x, y, z) representing the coordinates of the sampled point.
+    '''
+    # Generate two random numbers between -length1/2 and length1/2 and -length2/2 and length2/2 respectively
+    x = random.uniform(-length1/2, length1/2)
+    y = random.uniform(-length2/2, length2/2)
+    # Those numbers represent the coordinates of the sampled point in the normal coordinate system
+    # Transform the coordinates to the global coordinate system
+    projected_point = x * np.array(normal1) + y * np.array(normal2) + np.array(center)
+    return projected_point
+
+def __sample_point_parallelepiped_3d(normal1: Tuple[float, float, float], normal2: Tuple[float, float, float], 
+                                  normal3: Tuple[float, float, float], center: Tuple[float, float, float], 
+                                  length1: float, length2: float, length3: float) -> Tuple[float, float, float]:
+    '''
+    Sample a point from a parallelepiped with sides parallel to the vectors normal1, normal2 and normal3.
+
+    :param normal1: Tuple[float, float, float]
+        The first vector normal to the sides of the parallelepiped.
+    :param normal2: Tuple[float, float, float]
+        The second vector normal to the sides of the parallelepiped.
+    :param normal3: Tuple[float, float, float]
+        The third vector normal to the sides of the parallelepiped.
+    :param center: Tuple[float, float, float]
+        The center of the parallelepiped.
+    :param length1: float
+        The length of the first side of the parallelepiped.
+    :param length2: float
+        The length of the second side of the parallelepiped.    
     :param length3: float
-        The length of the third side of the parallelogram.
+        The length of the third side of the parallelepiped.
     :return: Tuple[float, float, float]
         A tuple (x, y, z) representing the coordinates of the sampled point.
     '''
@@ -435,29 +583,24 @@ def __sample_point_parallelogram_3d(normal1: Tuple[float, float, float], normal2
     return projected_point
 
 def sampling_parallelogram_3d(n_samples: int, normal1: Tuple[float, float, float], normal2: Tuple[float, float, float],
-                              normal3: Tuple[float, float, float], center: Tuple[float, float, float], 
-                              length1: float, length2: float, length3: float, seed: Optional[int] = None) -> List[Tuple[float, float, float]]:
+                              center: Tuple[float, float, float], length1: float, length2: float, seed: Optional[int] = None) -> List[Tuple[float, float, float]]:
     '''
-    Sample n_samples points from a parallelogram.
+    Sample n_samples points from a parallelogram
      
-    The parallelogram is defined by the vectors normal1, normal2 and normal3, the center and the lengths of the sides.
+    The parallelogram is defined by the vectors normal1 and normal2, the center and the lengths of the sides.
    
     :param n_samples: The number of samples to generate.
     :type n_samples: int
-    :param normal1: The first vector normal to the sides of the parallelogram.
+    :param normal1: The first vector normal to the sides of the parallelepiped.
     :type normal1: Tuple[float, float, float]
-    :param normal2: The second vector normal to the sides of the parallelogram.
+    :param normal2: The second vector normal to the sides of the parallelepiped.
     :type normal2: Tuple[float, float, float]
-    :param normal3: The third vector normal to the sides of the parallelogram.
-    :type normal3: Tuple[float, float, float]
-    :param center: The center of the parallelogram.
+    :param center: The center of the parallelepiped.
     :type center: Tuple[float, float, float]
-    :param length1: The length of the first side of the parallelogram.
+    :param length1: The length of the first side of the parallelepiped.
     :type length1: float
-    :param length2: The length of the second side of the parallelogram.
+    :param length2: The length of the second side of the parallelepiped.
     :type length2: float
-    :param length3: The length of the third side of the parallelogram.
-    :type length3: float
     :param seed: The seed to use for the random number generator.
     :type seed: Optional[int]
     :return: A list of tuples (x, y, z) representing the coordinates of the sampled points.
@@ -481,6 +624,112 @@ def sampling_parallelogram_3d(n_samples: int, normal1: Tuple[float, float, float
     >>> n_samples = 100
     >>> normal1 = (1, 1, 0)
     >>> normal2 = (-2, 1, 1)
+    >>> center = (1, 2, 0)
+    >>> length1 = 5
+    >>> length2 = 4
+
+    Sample the points:
+
+    >>> samples = sampling.sampling_parallelogram_3d(n_samples=n_samples, normal1=normal1, normal2=normal2, 
+    ...                                              center=center, length1=length1, length2=length2, seed=42)
+    >>> # list the first 5 samples
+    >>> samples[:5]
+    [array([ 5.49704795,  0.79717701, -1.89995698]),
+    array([ 2.08946069, -0.23201046, -1.10715705]),
+    array([0.76876017, 3.88915402, 0.70679795]),
+    array([ 6.26538718,  2.30865317, -1.65224467]),
+    array([ 4.37123134, -0.27120202, -1.88081112])]
+
+    Plot the 3D parallelogram and the samples:
+
+    >>> samples = np.array(samples)
+    >>> fig = plt.figure()
+    >>> ax = fig.add_subplot(111, projection='3d')
+    >>> ax.scatter(samples[:, 0], samples[:, 1], samples[:, 2])
+    >>> # create title from n_samples, center, and radius, using fstring
+    >>> title = (f'{n_samples} Samples on a 3D Parallelogram with normal vectors {normal1} and {normal2}, '
+    >>>         f'center {center}, length1 of {length1} and length2 of {length2}')
+    >>> ax.set_title(title)
+    >>> # Draw the parallelogram
+    >>> vertices = geometry.get_parallelogram_3d_vertices(center, normal1, normal2, length1, length2)
+    >>> # Define the edges of the 3d parallelogram
+    >>> edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
+    >>> # Plot the edges
+    >>> for edge in edges:
+    >>>     ax.plot([vertices[edge[0]][0], vertices[edge[1]][0]],
+    >>>         [vertices[edge[0]][1], vertices[edge[1]][1]],
+    >>>         [vertices[edge[0]][2], vertices[edge[1]][2]], color='red')
+    >>> # Draw the normals at a quarter of their corresponding length
+    >>> quarter_length1 = length1 / 4
+    >>> quarter_length2 = length2 / 4
+    >>> arrow_length1 = quarter_length1 / 2
+    >>> arrow_length2 = quarter_length2 / 2
+    >>> ax.quiver(center[0], center[1], center[2], normal1[0], normal1[1], normal1[2], length=arrow_length1, normalize=False, color='red')
+    >>> ax.quiver(center[0], center[1], center[2], normal2[0], normal2[1], normal2[2], length=arrow_length2, normalize=False, color='red')
+    >>> ax.set_xlabel('X')
+    >>> ax.set_ylabel('Y')
+    >>> ax.set_zlabel('Z')
+    >>> plt.show()
+
+    |sampling_parallelogram_3d|
+
+    .. |sampling_parallelogram_3d| image:: ../../_static/images/sampling_parallelogram_3d.png
+    '''
+    if seed is not None:
+        random.seed(seed)
+    normal1 = np.array(normal1)
+    normal2 = np.array(normal2)
+    center = np.array(center)
+    samples = [__sample_point_parallelogram_3d(normal1, normal2, center, length1, length2) for _ in range(n_samples)]
+    return samples
+
+def sampling_parallelepiped_3d(n_samples: int, normal1: Tuple[float, float, float], normal2: Tuple[float, float, float],
+                              normal3: Tuple[float, float, float], center: Tuple[float, float, float], 
+                              length1: float, length2: float, length3: float, seed: Optional[int] = None) -> List[Tuple[float, float, float]]:
+    '''
+    Sample n_samples points from a parallelepiped
+     
+    The parallelogram is defined by the vectors normal1, normal2 and normal3, the center and the lengths of the sides.
+   
+    :param n_samples: The number of samples to generate.
+    :type n_samples: int
+    :param normal1: The first vector normal to the sides of the parallelepiped.
+    :type normal1: Tuple[float, float, float]
+    :param normal2: The second vector normal to the sides of the parallelepiped.
+    :type normal2: Tuple[float, float, float]
+    :param normal3: The third vector normal to the sides of the parallelepiped.
+    :type normal3: Tuple[float, float, float]
+    :param center: The center of the parallelepiped.
+    :type center: Tuple[float, float, float]
+    :param length1: The length of the first side of the parallelepiped.
+    :type length1: float
+    :param length2: The length of the second side of the parallelepiped.
+    :type length2: float
+    :param length3: The length of the third side of the parallelepiped.
+    :type length3: float
+    :param seed: The seed to use for the random number generator.
+    :type seed: Optional[int]
+    :return: A list of tuples (x, y, z) representing the coordinates of the sampled points.
+    :rtype: List[Tuple[float, float, float]]
+
+    .. note:: The samples are uniformly distributed on the parallelepiped.
+
+    Examples
+    --------
+    Sample 100 points from a parallelepiped in an arbitrary position and with arbitrary sides:
+
+    Required imports:
+    
+    >>> import mrdja.sampling as sampling
+    >>> import mrdja.geometry as geometry
+    >>> import matplotlib.pyplot as plt
+    >>> import numpy as np
+
+    Define the parameters of the parallelepiped and the number of points to sample:
+
+    >>> n_samples = 100
+    >>> normal1 = (1, 1, 0)
+    >>> normal2 = (-2, 1, 1)
     >>> normal3 = (1, -1, 3)
     >>> center = (1, 2, 0)
     >>> length1 = 5
@@ -489,7 +738,7 @@ def sampling_parallelogram_3d(n_samples: int, normal1: Tuple[float, float, float
 
     Sample the points:
 
-    >>> samples = sampling.sampling_parallelogram_3d(n_samples=n_samples, normal1=normal1, normal2=normal2, 
+    >>> samples = sampling.sampling_parallelepiped_3d(n_samples=n_samples, normal1=normal1, normal2=normal2, 
     ...                                              normal3=normal3, center=center, length1=length1,
     ...                                              length2=length2, length3=length3, seed=42)
     >>> # list the first 5 samples
@@ -500,19 +749,19 @@ def sampling_parallelogram_3d(n_samples: int, normal1: Tuple[float, float, float
     array([ 0.91594816, -1.49252787, -1.07725051]),
     array([ 1.49163196, -2.02162286,  0.14431054])]
         
-    Plot the 3D parallelogram and the samples:
+    Plot the 3D parallelepiped and the samples:
 
     >>> samples = np.array(samples)
     >>> fig = plt.figure()
     >>> ax = fig.add_subplot(111, projection='3d')
     >>> ax.scatter(samples[:, 0], samples[:, 1], samples[:, 2])
     >>> # create title from n_samples, center, and radius, using fstring
-    >>> title = (f'{n_samples} Samples on a 3D Parallelogram with normal vectors {normal1}, {normal2} and {normal3}, '
+    >>> title = (f'{n_samples} Samples on a 3D Parallelepiped with normal vectors {normal1}, {normal2} and {normal3}, '
     >>>         f'center {center}, length1 of {length1}, length2 of {length2} and length3 of {length3}')
     >>> ax.set_title(title)
-    >>> # Draw the parallelogram
-    >>> vertices = geometry.get_parallelogram_3d_vertices(center, normal1, normal2, normal3, length1, length2, length3)
-    >>> # Define the edges of the 3d parallelogram
+    >>> # Draw the parallelepiped
+    >>> vertices = geometry.get_parallelepiped_3d_vertices(center, normal1, normal2, normal3, length1, length2, length3)
+    >>> # Define the edges of the 3d parallelepiped
     >>> edges = [(0, 1), (1, 2), (2, 3), (3, 0), (4, 5), (5, 6),
     >>>         (6, 7), (7, 4), (0, 4), (1, 5), (2, 6), (3, 7)]
     >>> # Plot the edges
@@ -533,9 +782,9 @@ def sampling_parallelogram_3d(n_samples: int, normal1: Tuple[float, float, float
     >>> ax.set_zlabel('Z')
     >>> plt.show()
 
-    |sampling_parallelogram_3d|
+    |sampling_parallelepiped_3d|
 
-    .. |sampling_parallelogram_3d| image:: ../../_static/images/sampling_parallelogram_3d.png
+    .. |sampling_parallelepiped_3d| image:: ../../_static/images/sampling_parallelepiped_3d.png
     '''
     if seed is not None:
         random.seed(seed)
@@ -543,7 +792,7 @@ def sampling_parallelogram_3d(n_samples: int, normal1: Tuple[float, float, float
     normal2 = np.array(normal2)
     normal3 = np.array(normal3)
     center = np.array(center)
-    samples = [__sample_point_parallelogram_3d(normal1, normal2, normal3, center, length1, length2, length3) for _ in range(n_samples)]
+    samples = [__sample_point_parallelepiped_3d(normal1, normal2, normal3, center, length1, length2, length3) for _ in range(n_samples)]
     return samples
 
 def __sample_point_cuboid(a, b, c, d, h):
