@@ -182,7 +182,8 @@ def sampling_circle_3d(n_samples, radius: float = 1.0, center: np.ndarray =np.ar
     Required imports:
     
     >>> import mrdja.sampling as sampling
-    >>> import mrdja.geometry as geometry
+    >>> import mrdja.geometry as geom
+    >>> import mrdja.matplot3d as plt3d
     >>> import matplotlib.pyplot as plt
     >>> import numpy as np
 
@@ -190,79 +191,47 @@ def sampling_circle_3d(n_samples, radius: float = 1.0, center: np.ndarray =np.ar
 
     >>> n_samples = 100
     >>> radius = 5
-    >>> center = (1, 2, 0)
-    >>> normal = (1, 1, 0)
+    >>> center = np.array([1, 2, 0])
+    >>> normal = np.array([1, 1, 0]) / np.linalg.norm(np.array([1, 1, 0]))
 
     Sample the points:
 
     >>> samples = sampling.sampling_circle_3d(n_samples=n_samples, radius=radius, center=center, normal=normal, seed=42)
     >>> # list the first 5 samples
     >>> samples[:5]
-    [array([ 5.49704795,  0.79717701, -1.89995698]),
-    array([ 2.08946069, -0.23201046, -1.10715705]),
-    array([0.76876017, 3.88915402, 0.70679795]),
-    array([ 6.26538718,  2.30865317, -1.65224467]),
-    array([ 4.37123134, -0.27120202, -1.88081112])]
+    [array([ 4.07208022, -1.07208022, -2.24970682]),
+    array([-1.56630238,  4.56630238,  1.76699487]),
+    array([0.05579622, 2.94420378, 0.05355288]),
+    array([0.13849159, 2.86150841, 1.49884438]),
+    array([2.62250429, 0.37749571, 0.89265684])]
 
     Plot the 3D circle and the samples:
-
-    >>> samples = np.array(samples)
+    
     >>> fig = plt.figure()
     >>> ax = fig.add_subplot(111, projection='3d')
-    >>> ax.scatter(samples[:, 0], samples[:, 1], samples[:, 2])
-    >>> # create title from n_samples, center, and radius, using fstring
-    >>> title = (f'{n_samples} Samples on a 3D circle with normal vector {normal}, '
-    >>>         f'center {center} and radius {radius}')
+    >>> plt3d.draw_circumference(center=center, radius=radius, normal=normal, color="blue", alpha=0.2, ax=ax)
+    >>> xlim_min = np.min([sample[0] for sample in samples])
+    >>> xlim_max = np.max([sample[0] for sample in samples])
+    >>> ylim_min = np.min([sample[1] for sample in samples])
+    >>> ylim_max = np.max([sample[1] for sample in samples])
+    >>> zlim_min = np.min([sample[2] for sample in samples])
+    >>> zlim_max = np.max([sample[2] for sample in samples])
+    >>> graph_limits = geom.get_limits_of_3d_graph_from_limits_of_object(xlim_min, xlim_max, ylim_min, ylim_max, zlim_min, zlim_max)
+    >>> ax.set_xlim(graph_limits[0], graph_limits[1])  # Set x-axis limits
+    >>> ax.set_ylim(graph_limits[2], graph_limits[3])  # Set y-axis limits
+    >>> ax.set_zlim(graph_limits[4], graph_limits[5])  # Set z-axis limits
+    >>> ax.scatter(*zip(*samples))
+    >>> # create title from n_samples, center, and radius, using f-string
+    >>> title = (f'{n_samples} Samples on a Circle with Center {center} and Radius {radius}')
     >>> ax.set_title(title)
-    >>> # Draw the circle
-    >>> vertices = geometry.get_parallelogram_3d_vertices(center, normal1, normal2, length1, length2)
-    >>> # Define the edges of the 3d parallelogram
-    >>> edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
-    >>> # Plot the edges
-    >>> for edge in edges:
-    >>>     ax.plot([vertices[edge[0]][0], vertices[edge[1]][0]],
-    >>>         [vertices[edge[0]][1], vertices[edge[1]][1]],
-    >>>         [vertices[edge[0]][2], vertices[edge[1]][2]], color='red')
-    >>> # Draw the normals at a quarter of their corresponding length
-    >>> quarter_length1 = length1 / 4
-    >>> quarter_length2 = length2 / 4
-    >>> arrow_length1 = quarter_length1 / 2
-    >>> arrow_length2 = quarter_length2 / 2
-    >>> ax.quiver(center[0], center[1], center[2], normal1[0], normal1[1], normal1[2], length=arrow_length1, normalize=False, color='red')
-    >>> ax.quiver(center[0], center[1], center[2], normal2[0], normal2[1], normal2[2], length=arrow_length2, normalize=False, color='red')
     >>> ax.set_xlabel('X')
     >>> ax.set_ylabel('Y')
     >>> ax.set_zlabel('Z')
     >>> plt.show()
 
-        Plot the samples:
-    
-    >>> fig, ax = plt.subplots()
-    >>> xlim_min = center[0] - radius
-    >>> xlim_max = center[0] + radius
-    >>> ylim_min = center[1] - radius
-    >>> ylim_max = center[1] + radius
-    >>> graph_limits = geometry.get_limits_of_graph_from_limits_of_object(xlim_min, xlim_max, ylim_min, ylim_max)
-    >>> ax.set_xlim(graph_limits[0], graph_limits[1])  # Set x-axis limits
-    >>> ax.set_ylim(graph_limits[2], graph_limits[3]*1.1)  # Set y-axis limits
-    >>> ax.scatter(*zip(*samples))
-    >>> ax.set_aspect('equal')
-    >>> # create title from n_samples, center, and radius, using f-string
-    >>> title = (f'{n_samples} Samples on a Circle with Center {center} and Radius {radius}')
-    >>> ax.set_title(title)
-    >>> # draw also the circle in red
-    >>> circle = plt.Circle(center, radius, color='r', fill=False)
-    >>> ax.add_artist(circle)
-    >>> # draw the X and Y axes in dotted lines
-    >>> ax.axhline(0, linestyle='dotted', color='black')
-    >>> ax.axvline(0, linestyle='dotted', color='black')
-    >>> ax.set_xlabel('X')
-    >>> ax.set_ylabel('Y')
-    >>> plt.show()
+    |sampling_circle_3d|
 
-    |sampling_parallelogram_3d|
-
-    .. |sampling_parallelogram_3d| image:: ../../_static/images/sampling_parallelogram_3d.png
+    .. |sampling_circle_3d| image:: ../../_static/images/sampling_circle_3d.png
 
     '''
     if seed is not None:

@@ -33,7 +33,7 @@ def draw_plane_as_lines_open3d(A, B, C, D, size=10, line_color=[1, 0, 0]):
     return lineset
 
 
-def draw_face_of_cube(plane: np.ndarray, cube_min: np.ndarray, cube_max: np.ndarray, ax = None):
+def draw_face_of_cube(plane: np.ndarray, cube_min: np.ndarray, cube_max: np.ndarray, color: str = "red", alpha: float = 0.5, ax = None):
     '''
     Draws a plane in 3D space using matplotlib.
 
@@ -43,6 +43,10 @@ def draw_face_of_cube(plane: np.ndarray, cube_min: np.ndarray, cube_max: np.ndar
     :type cube_min: numpy.ndarray
     :param cube_max: A 3x1 numpy array containing the maximum x, y, and z values of the cube.
     :type cube_max: numpy.ndarray
+    :param color: The color of the plane.
+    :type color: str
+    :param alpha: The transparency of the plane.
+    :type alpha: float
     :param ax: The matplotlib axis to draw on.
     :type ax: matplotlib.axes.Axes3D
     :return: None
@@ -69,7 +73,7 @@ def draw_face_of_cube(plane: np.ndarray, cube_min: np.ndarray, cube_max: np.ndar
         y_grid, z_grid = np.meshgrid(y_vals, z_vals)
         x_grid = (-normal[1] * y_grid - normal[2] * z_grid - plane[3]) / normal[0]
     # Plot the plane
-    ax.plot_surface(x_grid, y_grid, z_grid, alpha=0.5, label='Plane', color='red')
+    ax.plot_surface(x_grid, y_grid, z_grid, alpha=alpha, color=color)
     if plot_inside_function:
         # Set axis labels
         ax.set_xlabel('X')
@@ -80,7 +84,7 @@ def draw_face_of_cube(plane: np.ndarray, cube_min: np.ndarray, cube_max: np.ndar
     else:
         return ax
 
-def draw_cube(cube_min: np.ndarray, cube_max: np.ndarray, ax = None):
+def draw_cube(cube_min: np.ndarray, cube_max: np.ndarray, color: str = "red", alpha: float = 0.5, ax = None):
     '''
     Draws a cube in 3D space using matplotlib.
 
@@ -88,6 +92,10 @@ def draw_cube(cube_min: np.ndarray, cube_max: np.ndarray, ax = None):
     :type cube_min: numpy.ndarray
     :param cube_max: A 3x1 numpy array containing the maximum x, y, and z values of the cube.
     :type cube_max: numpy.ndarray
+    :param color: The color of the cube.
+    :type color: str
+    :param alpha: The transparency of the cube.
+    :type alpha: float
     :return: None
     :rtype: None
 
@@ -99,7 +107,7 @@ def draw_cube(cube_min: np.ndarray, cube_max: np.ndarray, ax = None):
         >>> import numpy as np
         >>> cube_min = np.array([-2, -2, -1])
         >>> cube_max = np.array([1, 2, 2])
-        >>> drawing.draw_cube(cube_min, cube_max)
+        >>> drawing.draw_cube(cube_min, cube_max, color="red", alpha=0.5)
 
     |drawing_draw_cube_example|
 
@@ -123,7 +131,7 @@ def draw_cube(cube_min: np.ndarray, cube_max: np.ndarray, ax = None):
     # Draw the cube faces
     for plane in planes:
         # draw a plane limited to the cube's bounds
-        draw_face_of_cube(plane, cube_min, cube_max, ax)
+        draw_face_of_cube(plane, cube_min, cube_max, color=color, alpha=alpha, ax=ax)
     if plot_inside_function:
         # Set axis labels
         ax.set_xlabel('X')

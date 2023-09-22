@@ -106,7 +106,9 @@ def get_how_many_below_threshold_between_line_and_points_and_their_indices(point
     ::
 
         >>> import mrdja.ransac.coreransac as coreransac
+        >>> import mrdja.geometry as geom
         >>> import mrdja.drawing as drawing
+        >>> import mrdja.matplot3d as plot3d
         >>> import numpy as np
         >>> import matplotlib.pyplot as plt
         >>> line = np.array([[0, 0, 0], [1, 1, 1]])
@@ -128,28 +130,37 @@ def get_how_many_below_threshold_between_line_and_points_and_their_indices(point
         >>> cube_min = np.min(points, axis=0)
         >>> cube_max = np.max(points, axis=0)
 
+        >>> # Get the intersection of the line with the cube
+        >>> intersection_points = geom.get_intersection_points_of_line_with_cube(line, cube_min, cube_max)
 
-        >>> # Extend the line to the cube limits.
-        >>> extended_line = drawing.extend_line_to_cube_limits(line, cube_min, cube_max)
+        >>> # Draw the cube
+        >>> fig = plt.figure()
+        >>> ax = fig.add_subplot(111, projection='3d')
+        >>> drawing.draw_cube(cube_min, cube_max, alpha = 0.1, ax = ax)
+        >>> # Draw the segment between the intersection points
+        >>> plot3d.draw_segment(intersection_points, color="green", ax = ax)
+        >>> # Draw the intersection points
+        >>> plot3d.draw_points(intersection_points, color="black", style="X", ax = ax)
+
 
         >>> # Get the indices of the points above the threshold
         >>> all_indices = np.arange(len(points))
         >>> indices_above = np.setdiff1d(all_indices, indices_below)
-        >>> # Create a 3D scatter plot
-        >>> fig = plt.figure()
-        >>> ax = fig.add_subplot(111, projection='3d')
         >>> # Plot the points below the threshold in red
-        >>> ax.scatter(points[indices_below, 0], points[indices_below, 1], points[indices_below, 2], c='red', label='Below Threshold')
+        >>> plot3d.draw_points(points[indices_below], color="red", style="o", ax = ax)
         >>> # Plot the points above the threshold in blue
-        >>> ax.scatter(points[indices_above, 0], points[indices_above, 1], points[indices_above, 2], c='blue', label='Above Threshold')
+        >>> plot3d.draw_points(points[indices_above], color="blue", style="o", ax = ax)
 
-        >>> # Plot the extended line in green
-        >>> ax.plot(extended_line[:, 0], extended_line[:, 1], extended_line[:, 2], color='green', label='Line')
         >>> ax.set_xlabel('X')
         >>> ax.set_ylabel('Y')
         >>> ax.set_zlabel('Z')
         >>> ax.legend()
         >>> plt.show()
+
+    |coreransac_get_how_many_below_threshold_between_line_and_points_and_their_indices_example|
+
+    .. |coreransac_get_how_many_below_threshold_between_line_and_points_and_their_indices_example| image:: ../../_static/images/coreransac_get_how_many_below_threshold_between_line_and_points_and_their_indices_example.png
+
 
     """
     B = line_two_points[0]

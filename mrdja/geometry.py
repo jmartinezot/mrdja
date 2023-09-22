@@ -297,7 +297,7 @@ def get_angle_between_lines(l1, l2):
     print("Vector 2: ", v2)
     return np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
 
-def get_intersection_points_of_line_with_cube(line: np.ndarray, cube_min: np.ndarray, cube_max: np.ndarray) -> List[np.ndarray]:
+def get_intersection_points_of_line_with_cube(line: np.ndarray, cube_min: np.ndarray, cube_max: np.ndarray) -> np.ndarray:
     '''
     Get the intersection points of a line with a cube.
 
@@ -308,7 +308,7 @@ def get_intersection_points_of_line_with_cube(line: np.ndarray, cube_min: np.nda
     :param cube_max: Maximum point of the cube.
     :type cube_max: np.ndarray
     :return: Intersection points.
-    :rtype: List[np.ndarray]
+    :rtype: np.ndarray
 
     :Example:
 
@@ -322,9 +322,8 @@ def get_intersection_points_of_line_with_cube(line: np.ndarray, cube_min: np.nda
         >>> cube_max = np.array([1, 2, 2])
         >>> intersection_points = geom.get_intersection_points_of_line_with_cube(line, cube_min, cube_max)
         >>> intersection_points
-        [array([1., 1., 1.]), array([-1., -1., -1.])]
-        >>> Draw the cube, the intersection points, and the line
-        >>> drawing.draw_cube(cube_min, cube_max)
+        array([[ 1.,  1.,  1.],
+              [-1., -1., -1.]])
     '''
     # Initialize an empty list to store intersection points.
     intersection_points = []
@@ -353,7 +352,7 @@ def get_intersection_points_of_line_with_cube(line: np.ndarray, cube_min: np.nda
                 if all(cube_min <= intersection_point) and all(intersection_point <= cube_max):
                     intersection_points.append(intersection_point)
 
-    return intersection_points
+    return np.array(intersection_points)
 
 
 def get_intersection_point_of_line_with_plane(line: np.ndarray, plane: np.ndarray) -> Optional[np.ndarray]:

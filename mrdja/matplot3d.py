@@ -238,3 +238,48 @@ def draw_circumference(center: np.ndarray = np.array([0, 0, 0]), radius: float =
         plt.show()
     else:
         return ax
+    
+def draw_points(points: np.ndarray, color: str = 'red', style: str = "o", alpha: float = 0.5, ax = None):
+    '''
+    Draws points in 3D space.
+
+    :param points: A Nx3 numpy array containing the points to draw.
+    :type points: numpy.ndarray
+    :param color: The color of the points to draw.
+    :type color: str
+    :param style: The style of the points to draw.
+    :type style: str
+    :param alpha: The transparency of the points to draw.
+    :type alpha: float
+    :param ax: The matplotlib ax object to draw on.
+    :type ax: matplotlib.axes._subplots.Axes3DSubplot
+    :return: The ax object.
+    :rtype: matplotlib.axes._subplots.Axes3DSubplot
+
+    :Example:
+
+    ::
+
+    >>> import mrdja.matplot3d as plt3d
+    >>> import numpy as np
+    >>> points = np.array([[0, 0, 0], [1, 1, 1], [1, 0, 0]])
+    >>> plt3d.draw_points(points, color="blue", style="o")
+
+
+    |matplot3d_draw_points_example|
+
+    .. |matplot3d_draw_points_example| image:: ../../_static/images/matplot3d_draw_points_example.png
+    '''
+    plot_inside_function = False
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        plot_inside_function = True
+    ax.scatter(points[:, 0], points[:, 1], points[:, 2], color=color, marker=style, alpha=alpha)
+    if plot_inside_function:
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        plt.show()
+    else:
+        return ax
