@@ -1,6 +1,7 @@
 import mrdja.ransac.coreransac as coreransac
+import mrdja.ransaclp as ransaclp
 import mrdja.pointcloud as pointcloud
-import mrdja.geometry as geometry
+import mrdja.geometry as geom
 import mrdja.drawing as drawing
 import open3d as o3d
 import numpy as np
@@ -24,85 +25,29 @@ Hacer varios experimentos, tanto de RANSAC con 239 o más iteraciones, como de o
 # dict_results = pointcloud_audit(pcd)
 # print(dict_results)
 
-def get_RANSAC_data_from_file(filename, ransac_iterations, threshold, seed):
-    dict_full_results = {}
-    dict_full_results["filename"] = filename
-
-    pcd = o3d.io.read_point_cloud(filename)
-    '''
-    audit_before_sanitizing = pointcloud.pointcloud_audit(pcd)
-    dict_full_results["audit_before_sanitizing"] = audit_before_sanitizing
-    pcd = pointcloud.pointcloud_sanitize(pcd)
-    audit_after_sanitizing = pointcloud.pointcloud_audit(pcd)
-    dict_full_results["audit_after_sanitizing"] = audit_after_sanitizing
-    '''
-    number_pcd_points = len(pcd.points)
-    dict_full_results["number_pcd_points"] = number_pcd_points
-    np_points = np.asarray(pcd.points)
-
-    dict_full_results["ransac_iterations_results"] = []
-
-    np.random.seed(seed)
-    max_number_inliers = 0
-    best_iteration_results = None
-    for i in range(ransac_iterations):
-        print("Iteration", i)
-        dict_iteration_results = coreransac.get_ransac_line_iteration_results(np_points, threshold, number_pcd_points)
-        if dict_iteration_results["number_inliers"] > max_number_inliers:
-            max_number_inliers = dict_iteration_results["number_inliers"]
-            best_iteration_results = dict_iteration_results
-        dict_full_results["ransac_iterations_results"].append(dict_iteration_results)
-    dict_full_results["ransac_best_iteration_results"] = best_iteration_results
-    return dict_full_results
-
 ransac_iterations = 200
 threshold = 0.02
+threshold_pcd = 0.02
 seed = 42
+RANSAC_iterator = coreransac.get_ransac_line_iteration_results
 
 # filename = "/home/scpmaotj/Stanford3dDataset_v1.2/Area_1/conferenceRoom_1/conferenceRoom_1.ply"
 # filename = "/home/scpmaotj/Stanford3dDataset_v1.2/Area_1/office_1/office_1.ply"
 filename = "/home/scpmaotj/Stanford3dDataset_v1.2/Area_1/WC_1/WC_1.ply"
-RANSAC_data_from_file = get_RANSAC_data_from_file(filename, ransac_iterations, threshold, seed)
+RANSAC_data_from_file = ransaclp.get_RANSAC_data_from_file(filename, RANSAC_iterator = RANSAC_iterator, 
+                                                           ransac_iterations = ransac_iterations, 
+                                                           threshold = threshold, audit_cloud=False, seed = seed)
 
 print(RANSAC_data_from_file)
-
-# create a function that takes the RANSAC_data_from_file and the iteration number and returns the inliers
-# create a function that takes the RANSAC_data_from_file and the iteration number and returns the number of inliers
 
 pcd = o3d.io.read_point_cloud(RANSAC_data_from_file["filename"])
 np_points = np.asarray(pcd.points)
 
-# create a function that returns all the current_line along with their number_inliers
+ordered_pairs = ransaclp.get_lines_and_number_inliers_ordered_by_number_inliers(RANSAC_data_from_file)
 
-def get_lines_and_number_inliers_from_RANSAC_data_from_file(RANSAC_data_from_file):
-    pair_lines_number_inliers = []
-    for dict_iteration_results in RANSAC_data_from_file["ransac_iterations_results"]:
-        pair_lines_number_inliers.append((dict_iteration_results["current_line"], dict_iteration_results["number_inliers"]))
-    return pair_lines_number_inliers
+pair_lines_number_inliers = ransaclp.get_lines_and_number_inliers_from_RANSAC_data_from_file(RANSAC_data_from_file)
 
-# order the pairs by number_inliers
-
-def get_lines_and_number_inliers_ordered_by_number_inliers(RANSAC_data_from_file):
-    pair_lines_number_inliers = get_lines_and_number_inliers_from_RANSAC_data_from_file(RANSAC_data_from_file)
-    pair_lines_number_inliers_ordered = sorted(pair_lines_number_inliers, key=lambda pair_line_number_inliers: pair_line_number_inliers[1], reverse=True)
-    return pair_lines_number_inliers_ordered
-
-ordered_pairs = get_lines_and_number_inliers_ordered_by_number_inliers(RANSAC_data_from_file)
-
-list_sse_plane = []
-current_iteration = 0
-for i in range(40):
-    for j in range(i+1, 40):
-        # compute the current number of iterations
-        current_iteration += 1
-        print("Iteration", current_iteration)
-        line_1 = ordered_pairs[i][0]
-        line_2 = ordered_pairs[j][0]
-        points = np.array([line_1[0], line_1[1], line_2[0], line_2[1]])
-        a, b, c, d, sse = geometry.fit_plane_svd(points)
-        new_plane = np.array([a, b, c, d])
-        threshold_pcd = 0.02
-        list_sse_plane.append((sse, new_plane))
+list_sse_plane = ransaclp.get_list_sse_plane(pair_lines_number_inliers, percentage_best = 0.2)
 
 # get the plane values for the 5% percentile of sse (the best planes)
 list_sse = [pair_sse_plane[0] for pair_sse_plane in list_sse_plane]
