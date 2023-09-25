@@ -1,0 +1,1 @@
+The file "results_baseline_S3DIS.pkl" is the results of open3d with 100,000 iterations over the S3DIS database. The code for generating is in the docstring of "get_baseline_S3DIS" in "ransaclpexperiments.py".

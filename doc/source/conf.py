@@ -68,4 +68,9 @@ html_theme_options = {'body_max_width' : None, 'collapse_navigation' : False}
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-
+# conf.py options for Latex
+latex_engine = 'pdflatex'
+latex_elements = {
+    'papersize': 'a4paper',
+    'pointsize': '10pt',
+    }

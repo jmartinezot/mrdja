@@ -360,9 +360,9 @@ def get_ransac_plane_results(points: np.ndarray, threshold: float, num_iteration
         >>> num_iterations = 20
         >>> dict_results = coreransac.get_ransac_plane_results(pcd_points, threshold, num_iterations, seed = 42)
         >>> dict_results
-        >>> {'best_plane': array([-0.17535096,  0.45186984, -2.44615646,  5.69205427]),
-        >>> 'number_inliers': 153798,
-        >>> 'indices_inliers': array([     0,      1,      2, ..., 248476, 248477, 248478])}
+        {'best_plane': array([-0.17535096,  0.45186984, -2.44615646,  5.69205427]),
+        'number_inliers': 153798,
+        'indices_inliers': array([     0,      1,      2, ..., 248476, 248477, 248478])}
         >>> inliers = dict_results["indices_inliers"]
         >>> inlier_cloud = office_pcd.select_by_index(inliers)
         >>> inlier_cloud.paint_uniform_color([1.0, 0, 0])
@@ -396,3 +396,99 @@ def get_ransac_plane_results(points: np.ndarray, threshold: float, num_iteration
     return {"best_plane": best_plane, "number_inliers": number_points_in_best_plane, "indices_inliers": indices_inliers}
 
 
+def get_fitting_data_from_list_planes(points: np.ndarray, list_planes: List[np.ndarray], threshold: float) -> List[Dict]:
+    '''
+    Returns the fitting data for each plane in the list of planes.
+
+    :param points: The collection of points to fit the plane to.
+    :type points: np.ndarray
+    :param list_planes: The list of planes to fit to the points.
+    :type list_planes: List[np.ndarray]
+    :param threshold: The maximum distance from a point to the plane for it to be considered an inlier.
+    :type threshold: float
+    :return: A list of dictionaries containing the plane parameters, number of inliers, and their indices.
+    :rtype: List[Dict]
+
+    :Example:
+
+    ::
+
+        >>> import mrdja.ransac.coreransac as coreransac
+        >>> import open3d as o3d
+        >>> import numpy as np
+        >>> import random
+        >>> import open3d as o3d
+        >>> dataset = o3d.data.OfficePointClouds()
+        >>> pcds_offices = []
+        >>> for pcd_path in dataset.paths:
+        >>>     pcds_offices.append(o3d.io.read_point_cloud(pcd_path))
+        >>> office_pcd = pcds_offices[0]
+        >>> pcd_points = np.asarray(office_pcd.points)
+        >>> threshold = 0.1
+        >>> num_iterations = 20
+        >>> dict_results = coreransac.get_ransac_plane_results(pcd_points, threshold, num_iterations, seed = 42)
+        >>> dict_results
+        {'best_plane': array([-0.17535096,  0.45186984, -2.44615646,  5.69205427]),
+        'number_inliers': 153798,
+        'indices_inliers': array([     0,      1,      2, ..., 248476, 248477, 248478])}
+        >>> fitting_data = coreransac.get_fitting_data_from_list_planes(pcd_points, [dict_results["best_plane"]], threshold)
+        >>> fitting_data
+        [{'plane': array([-0.17535096,  0.45186984, -2.44615646,  5.69205427]),
+        'number_inliers': 153798,
+        'indices_inliers': array([     0,      1,      2, ..., 248476, 248477, 248478])}]
+    ''' 
+    list_fitting_data = []
+    for plane in list_planes:
+        how_many_in_plane, indices_inliers = get_how_many_below_threshold_between_plane_and_points_and_their_indices(points, plane, threshold)
+        list_fitting_data.append({"plane": plane, "number_inliers": how_many_in_plane, "indices_inliers": indices_inliers})
+    return list_fitting_data
+
+def get_best_fitting_data_from_list_planes(points: np.ndarray, list_planes: List[np.ndarray], threshold: float) -> Dict:
+    '''
+    Returns the fitting data for the best plane in the list of planes.
+
+    :param points: The collection of points to fit the plane to.
+    :type points: np.ndarray
+    :param list_planes: The list of planes to fit to the points.
+    :type list_planes: List[np.ndarray]
+    :param threshold: The maximum distance from a point to the plane for it to be considered an inlier.
+    :type threshold: float
+    :return: A dictionary containing the plane parameters, number of inliers, and their indices.
+    :rtype: Dict
+
+    :Example:
+
+    ::
+
+        >>> import mrdja.ransac.coreransac as coreransac
+        >>> import open3d as o3d
+        >>> import numpy as np
+        >>> import random
+        >>> import open3d as o3d
+        >>> dataset = o3d.data.OfficePointClouds()
+        >>> pcds_offices = []
+        >>> for pcd_path in dataset.paths:
+        >>>     pcds_offices.append(o3d.io.read_point_cloud(pcd_path))
+        >>> office_pcd = pcds_offices[0]
+        >>> pcd_points = np.asarray(office_pcd.points)
+        >>> threshold = 0.1
+        >>> num_iterations = 20
+        >>> dict_results = coreransac.get_ransac_plane_results(pcd_points, threshold, num_iterations, seed = 42)
+        >>> dict_results
+        {'best_plane': array([-0.17535096,  0.45186984, -2.44615646,  5.69205427]),
+        'number_inliers': 153798,
+        'indices_inliers': array([     0,      1,      2, ..., 248476, 248477, 248478])}
+        >>> fitting_data = coreransac.get_fitting_data_from_list_planes(pcd_points, [dict_results["best_plane"]], threshold)
+        >>> fitting_data
+        [{'plane': array([-0.17535096,  0.45186984, -2.44615646,  5.69205427]),
+        'number_inliers': 153798,
+        'indices_inliers': array([     0,      1,      2, ..., 248476, 248477, 248478])}]
+        >>> best_fitting_data = coreransac.get_best_fitting_data_from_list_planes(pcd_points, [dict_results["best_plane"]], threshold)
+        >>> best_fitting_data
+        {'plane': array([-0.17535096,  0.45186984, -2.44615646,  5.69205427]),
+        'number_inliers': 153798,
+        'indices_inliers': array([     0,      1,      2, ..., 248476, 248477, 248478])}
+    '''
+    fitting_data = get_fitting_data_from_list_planes(points, list_planes, threshold)
+    best_fitting_data = max(fitting_data, key=lambda fitting_data: fitting_data["number_inliers"])
+    return best_fitting_data
