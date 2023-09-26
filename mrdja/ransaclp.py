@@ -401,7 +401,7 @@ def get_ransaclp_data_from_filename(filename: str, ransac_iterations: int = 100,
     ransac_iterator = coreransac.get_ransac_line_iteration_results
     ransac_data = get_ransac_data_from_filename(filename, ransac_iterator = ransac_iterator,
                                                 ransac_iterations = ransac_iterations,
-                                                threshold = threshold, audit_cloud=True, seed = seed)
+                                                threshold = threshold, audit_cloud=audit_cloud, seed = seed)
     pcd = o3d.io.read_point_cloud(ransac_data["filename"])
     np_points = np.asarray(pcd.points)
 
