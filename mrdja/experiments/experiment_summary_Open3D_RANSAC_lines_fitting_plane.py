@@ -90,6 +90,9 @@ for index, filename in enumerate(ply_files):
 
     # save the results as a pickle file in the same folder as the filename file; to do so, just change the extension of the file to pkl
     filename_pkl = filename.replace(".ply", ".pkl")
+    # filename is in the form '/root/open3d_data/extract/OfficePointClouds/cloud_bin_51.ply'; convert it to "/tmp/cloud_bin_51.pkl"
+    filename_pkl = filename_pkl.split("/")[-1]
+    filename_pkl = "/tmp/" + filename_pkl
     with open(filename_pkl, 'wb') as f:
         pkl.dump(dict_all_results, f)
 

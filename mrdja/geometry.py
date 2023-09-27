@@ -478,3 +478,85 @@ def get_best_plane_from_points_from_two_segments(segment_1: np.ndarray, segment_
     a, b, c, d, sse = fit_plane_svd(points)
     best_plane = np.array([a, b, c, d])
     return best_plane, sse
+
+def get_point_of_plane_closest_to_given_point(plane: np.ndarray, point: np.ndarray) -> np.ndarray:
+    '''
+    Get the point of a plane closest to a given point.
+
+    :param plane: Plane described as Ax + By + Cz + D = 0.
+    :type plane: np.ndarray
+    :param point: Point.
+    :type point: np.ndarray
+    :return: Point of plane closest to given point.
+    :rtype: np.ndarray
+
+    :Example:
+    '''
+    # Step 1: Calculate the normal vector of the plane.
+    normal = plane[:3]
+    # Step 2: Calculate the point of the plane closest to the given point.
+    t = - (np.dot(normal, point) + plane[3]) / np.dot(normal, normal)
+    closest_point = point + t * normal
+    return closest_point
+
+def get_centroid_of_points(points: np.ndarray) -> np.ndarray:
+    '''
+    Get the centroid of a set of points.
+
+    :param points: Points.
+    :type points: np.ndarray
+    :return: Centroid.
+    :rtype: np.ndarray
+
+    :Example:
+
+    ::
+
+        >>> import mrdja.geometry as geom
+        >>> import numpy as np
+        >>> points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
+        >>> centroid = geom.get_centroid_of_points(points)
+        >>> centroid
+        array([0.33333333, 0.33333333, 0.        ])
+
+    '''
+    return np.mean(points, axis=0)
+
+def get_a_polygon_from_plane_equation_and_point(plane: np.ndarray, point: np.ndarray, scale: float = 1.0)->np.ndarray:
+    '''
+    Get a polygon from plane equation and point.
+
+    :param plane: Plane equation coefficients.
+    :type plane: np.ndarray
+    :param point: Point.
+    :type point: np.ndarray
+    :param scale: Scale.
+    :type scale: float
+    :return: Polygon.
+    :rtype: np.ndarray
+
+    :Example:
+
+    ::
+
+        >>> import mrdja.geometry as geom
+        >>> import numpy as np
+        >>> plane = np.array([0, 0, 1, -3])
+        >>> point = np.array([1, 1, 1])
+        >>> polygon = geom.get_a_polygon_from_plane_equation_and_point(plane, point)
+        >>> polygon
+    '''
+    # Step 1: Calculate the normal vector of the plane.
+    normal = plane[:3]
+    # Step 2: Calculate the point of the plane closest to the given point.
+    t = - (np.dot(normal, point) + plane[3]) / np.dot(normal, normal)
+    closest_point = point + t * normal
+    # Step 3: Calculate two perpendicular unit vectors in the plane.
+    perpendicular1, perpendicular2 = get_two_perpendicular_unit_vectors_in_plane(plane)
+    # Step 4: Calculate the vertices of the polygon.
+    vertex1 = closest_point + perpendicular1 * scale + perpendicular2 * scale
+    vertex2 = closest_point - perpendicular1 * scale + perpendicular2 * scale
+    vertex3 = closest_point - perpendicular1 * scale - perpendicular2 * scale
+    vertex4 = closest_point + perpendicular1 * scale - perpendicular2 * scale
+    # Step 5: Return the polygon.
+    return np.array([vertex1, vertex2, vertex3, vertex4])
