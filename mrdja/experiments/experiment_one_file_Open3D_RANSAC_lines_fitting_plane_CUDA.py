@@ -17,7 +17,9 @@ seed = 42
 dict_results = experiments.get_data_comparison_ransac_and_ransaclp(filename = filename, repetitions = repetitions, 
                                                                    iterations_list = iterations_list, threshold = threshold, 
                                                                     percentage_chosen_lines = percentage_chosen_lines, 
-                                                                    percentage_chosen_planes = percentage_chosen_planes, verbosity_level = 1, 
+                                                                    percentage_chosen_planes = percentage_chosen_planes,
+                                                                    cuda = True, 
+                                                                    verbosity_level = 1, 
                                                                     seed = seed)
 
 print(dict_results)

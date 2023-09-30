@@ -112,7 +112,8 @@ def compute_parameters_ransac_line (line_iterations: int, percentage_chosen_line
     return {"number_chosen_lines": number_chosen_lines, "number_lines_pairs": number_lines_pairs, "number_chosen_planes": number_chosen_planes, "total_iterations": total_iterations}
 
 def get_data_comparison_ransac_and_ransaclp(filename: str, repetitions: int, iterations_list: List[int], threshold: float, 
-                                            percentage_chosen_lines: float, percentage_chosen_planes: float, verbosity_level: int = 0, 
+                                            percentage_chosen_lines: float, percentage_chosen_planes: float, 
+                                            cuda: bool = False, verbosity_level: int = 0, 
                                             inherited_verbose_string: str = "",
                                             seed: int = None) -> Dict :
     '''
@@ -150,12 +151,29 @@ def get_data_comparison_ransac_and_ransaclp(filename: str, repetitions: int, ite
     if percentage_chosen_planes <= 0 or percentage_chosen_planes > 1:
         raise ValueError("percentage_chosen_planes must be greater than 0 and less or equal than 1")
     
+    if seed is not None:
+        np.random.seed(seed)
+    
     dict_all_results = {}
     dict_all_results["filename"] = filename
 
     pcd = o3d.io.read_point_cloud(filename)
     pcd = pointcloud.pointcloud_sanitize(pcd)
     np_points = np.asarray(pcd.points)
+
+    if cuda:
+        # Extract x, y, z coordinates from np_points
+        points_x = np_points[:, 0]
+        points_y = np_points[:, 1]
+        points_z = np_points[:, 2]
+        # Convert points_x, points_y, and points_z to contiguous arrays
+        d_points_x = np.ascontiguousarray(points_x)
+        d_points_y = np.ascontiguousarray(points_y)
+        d_points_z = np.ascontiguousarray(points_z)
+        d_points_x = cuda.to_device(d_points_x)
+        d_points_y = cuda.to_device(d_points_y)
+        d_points_z = cuda.to_device(d_points_z)
+
     dict_all_results["number_pcd_points"] = len(np_points)
     dict_all_results["threshold"] = threshold
 
@@ -165,9 +183,9 @@ def get_data_comparison_ransac_and_ransaclp(filename: str, repetitions: int, ite
     inherited_verbose_string = inherited_verbose_string + filename_only_file + " "
 
     for index, num_iterations in enumerate(iterations_list):
-        inherited_verbose_string_in_first_loop = inherited_verbose_string + "Current max RANSAC iterations " + str(num_iterations) + " " + str(index+1) + "/" + str(len(iterations_list)) + " " 
+        inherited_verbose_string_in_first_loop = f"{inherited_verbose_string} Current max RANSAC iterations {num_iterations} {index+1}/{len(iterations_list)}"
         if verbosity_level > 0:
-            print(f"{inherited_verbose_string_in_first_loop}Current number of iterations analyzed: {num_iterations} / {max_iterations}")
+            print(f"{inherited_verbose_string_in_first_loop} Current number of iterations analyzed: {num_iterations} / {max_iterations}")
         parameters_experiment = compute_parameters_ransac_line(num_iterations, percentage_chosen_lines = percentage_chosen_lines, 
                                                                percentage_chosen_planes = percentage_chosen_planes)
         total_iterations = parameters_experiment["total_iterations"]
@@ -175,12 +193,16 @@ def get_data_comparison_ransac_and_ransaclp(filename: str, repetitions: int, ite
         dict_standard_RANSAC_results_list = list()
         dict_line_RANSAC_results_list = list()
 
+        current_repetition = 0
         for j in range(repetitions):
-            inherited_verbose_string_in_second_loop = inherited_verbose_string_in_first_loop + "Repetition " + str(j) + "/" + str(repetitions) + " "
-            ransaclp_data_from_file = ransaclp.get_ransaclp_data_from_filename(filename, ransac_iterations = num_iterations, 
-                                                           threshold = threshold, audit_cloud=False, verbosity_level = verbosity_level, 
+            current_repetition = current_repetition + 1
+            inherited_verbose_string_in_second_loop = f"{inherited_verbose_string_in_first_loop} Repetition {current_repetition}/{repetitions} "
+            ransaclp_data_from_file = ransaclp.get_ransaclp_data_from_np_points(np_points, ransac_iterations = num_iterations, 
+                                                           threshold = threshold,
+                                                           cuda = cuda,
+                                                           verbosity_level = verbosity_level, 
                                                            inherited_verbose_string = inherited_verbose_string_in_second_loop,
-                                                           seed = seed)
+                                                           seed = None)
             ransaclp_number_inliers = ransaclp_data_from_file["number_inliers"]
             ransaclp_plane = ransaclp_data_from_file["plane"]
             
