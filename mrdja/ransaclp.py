@@ -7,9 +7,9 @@ import numpy as np
 import random
 from typing import Callable, List, Tuple, Union, Dict
 
-coreransac.get_ransac_line_iteration_results
-
-def get_ransac_data_from_filename(filename: str, ransac_iterator: Callable, ransac_iterations: int = 100, threshold: float = 0.1, audit_cloud: bool = False, seed: int = None) -> Dict:
+def get_ransac_data_from_filename(filename: str, ransac_iterator: Callable, ransac_iterations: int = 100, threshold: float = 0.1, 
+                                  audit_cloud: bool = False, verbosity_level: int = 0, inherited_verbose_string: str = "",
+                                  seed: int = None) -> Dict:
     '''
     Gets the ransac data from a file. 
     
@@ -46,6 +46,12 @@ def get_ransac_data_from_filename(filename: str, ransac_iterator: Callable, rans
     :type ransac_iterations: int
     :param threshold: The threshold.
     :type threshold: float
+    :param audit_cloud: Whether to audit the cloud.
+    :type audit_cloud: bool
+    :param verbosity_level: The verbosity level.
+    :type verbosity_level: int
+    :param inherited_verbose_string: The inherited verbose string.
+    :type inherited_verbose_string: str
     :param seed: The seed.
     :type seed: int
     :return: The ransac data.
@@ -151,7 +157,12 @@ def get_ransac_data_from_filename(filename: str, ransac_iterator: Callable, rans
     max_number_inliers = 0
     best_iteration_results = None
     for i in range(ransac_iterations):
-        print("Iteration", i)
+        if verbosity_level == 1:
+            if i % 10 == 0:
+                # add inherited_verbose_string to the beginning of the string
+                print(inherited_verbose_string, "Fitting line to pointcloud: Iteration", i, "/", ransac_iterations)
+        elif verbosity_level >= 2:
+            print(inherited_verbose_string, "Fitting line to pointcloud: Iteration", i, "/", ransac_iterations)
         dict_iteration_results = ransac_iterator(np_points, threshold, number_pcd_points)
         if dict_iteration_results["number_inliers"] > max_number_inliers:
             max_number_inliers = dict_iteration_results["number_inliers"]
@@ -219,7 +230,8 @@ def get_lines_and_number_inliers_ordered_by_number_inliers(ransac_data: Dict) ->
     pair_lines_number_inliers_ordered = sorted(pair_lines_number_inliers, key=lambda pair_line_number_inliers: pair_line_number_inliers[1], reverse=True)
     return pair_lines_number_inliers_ordered
 
-def get_ordered_list_sse_plane(pair_lines_number_inliers:List[Tuple[np.ndarray, int]], number_best: int = None, percentage_best: float = 0.2, already_ordered: bool = False):
+def get_ordered_list_sse_plane(pair_lines_number_inliers:List[Tuple[np.ndarray, int]], number_best: int = None, percentage_best: float = 0.2, 
+                               already_ordered: bool = False, verbosity_level: int = 0, inherited_verbose_string: str = "") -> List[Tuple[float, np.ndarray]]:
     '''
     Gets a list of the sse (sum of squared errors) of the planes built from the best pairs of lines, along with the planes. 
     The best pairs of lines are the ones with the highest number of inliers. 
@@ -233,6 +245,10 @@ def get_ordered_list_sse_plane(pair_lines_number_inliers:List[Tuple[np.ndarray, 
     :type percentage_best: float
     :param already_ordered: Whether the pairs are already ordered by number of inliers.
     :type already_ordered: bool
+    :param verbosity_level: The verbosity level.
+    :type verbosity_level: int
+    :param inherited_verbose_string: The inherited verbose string.
+    :type inherited_verbose_string: str
     :return: The list of sse and planes ordered by sse.
     :rtype: List[Tuple[float, np.ndarray]]
 
@@ -272,11 +288,18 @@ def get_ordered_list_sse_plane(pair_lines_number_inliers:List[Tuple[np.ndarray, 
         pair_lines_number_inliers = sorted(pair_lines_number_inliers, key=lambda x: x[1], reverse=True)
     list_sse_plane = []
     current_iteration = 0
+    # compute the maximum number of iterations
+    total_number_iterations = int(number_best * (number_best - 1) / 2)
     for i in range(number_best):
         for j in range(i+1, number_best):
             # compute the current number of iterations
             current_iteration += 1
-            print("Iteration", current_iteration)
+            if verbosity_level == 1:
+                if current_iteration % 10 == 0:
+                    # add inherited_verbose_string to the beginning of the string and print also total number of iterations
+                    print(inherited_verbose_string, "Estimating planes: Line pair", current_iteration, "/", total_number_iterations)
+            elif verbosity_level >= 2:
+                print(inherited_verbose_string, "Estimating planes: Line pair", current_iteration, "/", total_number_iterations)
             line_1 = pair_lines_number_inliers[i][0]
             line_2 = pair_lines_number_inliers[j][0]
             plane, error = geom.get_best_plane_from_points_from_two_segments(line_1, line_2)
@@ -349,7 +372,8 @@ def get_n_percentile_from_list_sse_plane(list_sse_plane: List[Tuple[float, np.nd
     filtered_pairs = [(sse, plane) for sse, plane in zip(list_sse, list_plane) if sse <= percentile_threshold]
     return filtered_pairs
 
-def get_ransaclp_data_from_filename(filename: str, ransac_iterations: int = 100, threshold: float = 0.1, audit_cloud: bool = False, seed: int = None) -> Dict:
+def get_ransaclp_data_from_filename(filename: str, ransac_iterations: int = 100, threshold: float = 0.1, audit_cloud: bool = False, 
+                                    verbosity_level: int = 0, inherited_verbose_string: str = "", seed: int = None) -> Dict:
     '''
     Gets the ransaclp data from a file.
     
@@ -359,6 +383,12 @@ def get_ransaclp_data_from_filename(filename: str, ransac_iterations: int = 100,
     :type ransac_iterations: int
     :param threshold: The threshold.
     :type threshold: float
+    :param audit_cloud: Whether to audit the cloud.
+    :type audit_cloud: bool
+    :param verbosity_level: The verbosity level.
+    :type verbosity_level: int
+    :param inherited_verbose_string: The inherited verbose string.
+    :type inherited_verbose_string: str
     :param seed: The seed.
     :type seed: int
     :return: The ransaclp data.
@@ -401,12 +431,14 @@ def get_ransaclp_data_from_filename(filename: str, ransac_iterations: int = 100,
     ransac_iterator = coreransac.get_ransac_line_iteration_results
     ransac_data = get_ransac_data_from_filename(filename, ransac_iterator = ransac_iterator,
                                                 ransac_iterations = ransac_iterations,
-                                                threshold = threshold, audit_cloud=audit_cloud, seed = seed)
+                                                threshold = threshold, audit_cloud=audit_cloud, verbosity_level = verbosity_level, 
+                                                inherited_verbose_string=inherited_verbose_string, seed = seed)
     pcd = o3d.io.read_point_cloud(ransac_data["filename"])
     np_points = np.asarray(pcd.points)
 
     pair_lines_number_inliers = get_lines_and_number_inliers_from_ransac_data_from_file(ransac_data)
-    ordered_list_sse_plane = get_ordered_list_sse_plane(pair_lines_number_inliers, percentage_best = 0.2)
+    ordered_list_sse_plane = get_ordered_list_sse_plane(pair_lines_number_inliers, percentage_best = 0.2, verbosity_level=verbosity_level,
+                                                        inherited_verbose_string=inherited_verbose_string)
     list_sse_plane_05 = get_n_percentile_from_list_sse_plane(ordered_list_sse_plane, percentile = 5)
     list_good_planes = [sse_plane[1] for sse_plane in list_sse_plane_05]
     results_from_best_plane = coreransac.get_best_fitting_data_from_list_planes(np_points, list_good_planes, threshold)

@@ -1,4 +1,6 @@
-from typing import Dict
+import mrdja.ransaclp as ransaclp
+import mrdja.pointcloud as pointcloud
+from typing import Dict, List
 import numpy as np
 import open3d as o3d
 import glob
@@ -108,3 +110,99 @@ def compute_parameters_ransac_line (line_iterations: int, percentage_chosen_line
     number_chosen_planes = int(number_lines_pairs * percentage_chosen_planes)
     total_iterations = line_iterations + number_chosen_planes
     return {"number_chosen_lines": number_chosen_lines, "number_lines_pairs": number_lines_pairs, "number_chosen_planes": number_chosen_planes, "total_iterations": total_iterations}
+
+def get_data_comparison_ransac_and_ransaclp(filename: str, repetitions: int, iterations_list: List[int], threshold: float, 
+                                            percentage_chosen_lines: float, percentage_chosen_planes: float, verbosity_level: int = 0, 
+                                            inherited_verbose_string: str = "",
+                                            seed: int = None) -> Dict :
+    '''
+    Get the data for the comparison between RANSAC and RANSACLP.
+
+    :param filename: The path to the file to be processed.
+    :type filename: str
+    :param repetitions: The number of repetitions to be used.
+    :type repetitions: int
+    :param iterations_list: The list of iterations to be used.
+    :type iterations_list: List[int]
+    :param threshold: The threshold to be used in the RANSAC algorithm.
+    :type threshold: float
+    :param percentage_chosen_lines: The percentage of chosen lines to be used in the RANSAC line algorithm.
+    :type percentage_chosen_lines: float
+    :param percentage_chosen_planes: The percentage of chosen planes to be used in the RANSAC line algorithm.
+    :type percentage_chosen_planes: float
+    :param verbosity_level: The verbosity level to be used.
+    :type verbosity_level: int
+    :param inherited_verbose_string: The inherited verbose string to be used.
+    :type inherited_verbose_string: str
+    :param seed: The seed to be used.
+    :type seed: int
+    :return: A dictionary with the results.
+    :rtype: Dict
+    '''
+    if iterations_list is None:
+        raise ValueError("iterations_list cannot be None")
+    if len(iterations_list) == 0:
+        raise ValueError("iterations_list cannot be empty")
+    if repetitions <= 0:
+        raise ValueError("repetitions must be greater than 0")
+    if percentage_chosen_lines <= 0 or percentage_chosen_lines > 1:
+        raise ValueError("percentage_chosen_lines must be greater than 0 and less or equal than 1")
+    if percentage_chosen_planes <= 0 or percentage_chosen_planes > 1:
+        raise ValueError("percentage_chosen_planes must be greater than 0 and less or equal than 1")
+    
+    dict_all_results = {}
+    dict_all_results["filename"] = filename
+
+    pcd = o3d.io.read_point_cloud(filename)
+    pcd = pointcloud.pointcloud_sanitize(pcd)
+    np_points = np.asarray(pcd.points)
+    dict_all_results["number_pcd_points"] = len(np_points)
+    dict_all_results["threshold"] = threshold
+
+    # get the maximum number of iterations
+    max_iterations = max(iterations_list)
+    filename_only_file = os.path.basename(filename)
+    inherited_verbose_string = inherited_verbose_string + filename_only_file + " "
+
+    for index, num_iterations in enumerate(iterations_list):
+        inherited_verbose_string_in_first_loop = inherited_verbose_string + "Current max RANSAC iterations " + str(num_iterations) + " " + str(index+1) + "/" + str(len(iterations_list)) + " " 
+        if verbosity_level > 0:
+            print(f"{inherited_verbose_string_in_first_loop}Current number of iterations analyzed: {num_iterations} / {max_iterations}")
+        parameters_experiment = compute_parameters_ransac_line(num_iterations, percentage_chosen_lines = percentage_chosen_lines, 
+                                                               percentage_chosen_planes = percentage_chosen_planes)
+        total_iterations = parameters_experiment["total_iterations"]
+
+        dict_standard_RANSAC_results_list = list()
+        dict_line_RANSAC_results_list = list()
+
+        for j in range(repetitions):
+            inherited_verbose_string_in_second_loop = inherited_verbose_string_in_first_loop + "Repetition " + str(j) + "/" + str(repetitions) + " "
+            ransaclp_data_from_file = ransaclp.get_ransaclp_data_from_filename(filename, ransac_iterations = num_iterations, 
+                                                           threshold = threshold, audit_cloud=False, verbosity_level = verbosity_level, 
+                                                           inherited_verbose_string = inherited_verbose_string_in_second_loop,
+                                                           seed = seed)
+            ransaclp_number_inliers = ransaclp_data_from_file["number_inliers"]
+            ransaclp_plane = ransaclp_data_from_file["plane"]
+            
+            ransac_plane, inliers = pcd.segment_plane(distance_threshold=threshold,
+                                                    ransac_n=3,
+                                                    num_iterations=total_iterations)
+            ransac_number_inliers = len(inliers)
+
+            dict_standard_RANSAC_results = {"number_inliers": ransac_number_inliers, "plane": ransac_plane, "plane_iterations": total_iterations}
+            dict_line_RANSAC_results = {"number_inliers": ransaclp_number_inliers, "plane": ransaclp_plane, "line_iterations": num_iterations}
+            dict_line_RANSAC_results_list.append(dict_line_RANSAC_results)
+            dict_standard_RANSAC_results_list.append(dict_standard_RANSAC_results)
+
+        dict_all_results["standard_RANSAC_" + str(total_iterations)] = dict_standard_RANSAC_results_list
+        dict_all_results["line_RANSAC_" + str(total_iterations)] = dict_line_RANSAC_results_list
+        # get the mean of n_inliers_maximum of the elements of the list dict_line_RANSAC_results_list
+        list_n_inliers_maximum = [int(dict_line_RANSAC_results["number_inliers"]) for dict_line_RANSAC_results in dict_line_RANSAC_results_list]
+        mean_n_inliers_maximum = np.mean(list_n_inliers_maximum)
+        dict_all_results["mean_number_inliers_line_RANSAC_" + str(total_iterations)] = mean_n_inliers_maximum
+        # get the mean of n_inliers_maximum of the elements of the list dict_standard_RANSAC_results_list
+        list_n_inliers_maximum = [int(dict_standard_RANSAC_results["number_inliers"]) for dict_standard_RANSAC_results in dict_standard_RANSAC_results_list]
+        mean_n_inliers_maximum = np.mean(list_n_inliers_maximum)
+        dict_all_results["mean_number_inliers_standard_RANSAC_" + str(total_iterations)] = mean_n_inliers_maximum
+
+    return dict_all_results
