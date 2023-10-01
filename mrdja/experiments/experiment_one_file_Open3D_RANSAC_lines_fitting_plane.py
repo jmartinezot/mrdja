@@ -5,6 +5,10 @@ dataset = o3d.data.OfficePointClouds()
 office_paths = dataset.paths
 filename = office_paths[0]
 
+# add timing
+import time
+start = time.time()
+
 threshold = 0.02
 # repetitions = 10
 repetitions = 3
@@ -16,8 +20,12 @@ seed = 42
 
 dict_results = experiments.get_data_comparison_ransac_and_ransaclp(filename = filename, repetitions = repetitions, 
                                                                    iterations_list = iterations_list, threshold = threshold, 
+                                                                   cuda = True,
                                                                     percentage_chosen_lines = percentage_chosen_lines, 
                                                                     percentage_chosen_planes = percentage_chosen_planes, verbosity_level = 1, 
                                                                     seed = seed)
+
+end = time.time()
+print("Time elapsed: ", end - start)
 
 print(dict_results)

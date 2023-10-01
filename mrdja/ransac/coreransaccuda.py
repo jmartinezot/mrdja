@@ -2,6 +2,7 @@ from numba import cuda, float32
 import math
 import mrdja.ransac.coreransac as crs
 import mrdja.ransac.coreransacutils as crsu
+import mrdja.sampling as sampling
 import numpy as np
 import numba
 from time import time
@@ -313,7 +314,6 @@ def get_ransac_line_iteration_results_cuda(points: np.ndarray,
                                        d_points_x: cuda.devicearray.DeviceNDArray, 
                                        d_points_y: cuda.devicearray.DeviceNDArray, 
                                        d_points_z: cuda.devicearray.DeviceNDArray, 
-                                       num_points: int, 
                                        threshold: float,
                                        random_points: np.ndarray) -> dict:
     """
@@ -343,7 +343,7 @@ def get_ransac_line_iteration_results_cuda(points: np.ndarray,
     t1 = time()
     # esto es lo que tarda mucho
     if random_points is None:
-        current_random_points = crs.get_np_array_of_two_random_points_from_np_array_of_points(points, num_points)
+        current_random_points = sampling.sampling_np_arrays_from_enumerable(points, cardinality_of_np_arrays=2, number_of_np_arrays=1, num_source_elems=len(points), seed=None)[0]
     else:
         current_random_points = random_points
     t2 = time()

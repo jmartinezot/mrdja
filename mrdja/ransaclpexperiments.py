@@ -161,19 +161,6 @@ def get_data_comparison_ransac_and_ransaclp(filename: str, repetitions: int, ite
     pcd = pointcloud.pointcloud_sanitize(pcd)
     np_points = np.asarray(pcd.points)
 
-    if cuda:
-        # Extract x, y, z coordinates from np_points
-        points_x = np_points[:, 0]
-        points_y = np_points[:, 1]
-        points_z = np_points[:, 2]
-        # Convert points_x, points_y, and points_z to contiguous arrays
-        d_points_x = np.ascontiguousarray(points_x)
-        d_points_y = np.ascontiguousarray(points_y)
-        d_points_z = np.ascontiguousarray(points_z)
-        d_points_x = cuda.to_device(d_points_x)
-        d_points_y = cuda.to_device(d_points_y)
-        d_points_z = cuda.to_device(d_points_z)
-
     dict_all_results["number_pcd_points"] = len(np_points)
     dict_all_results["threshold"] = threshold
 

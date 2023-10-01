@@ -2,14 +2,14 @@ import mrdja.ransac.coreransac as coreransac
 import mrdja.ransac.coreransaccuda as coreransaccuda
 import mrdja.pointcloud as pointcloud
 import mrdja.geometry as geom
-import mrdja.drawing as drawing
+import mrdja.sampling as sampling
 import open3d as o3d
 import numpy as np
 import random
 from typing import Callable, List, Tuple, Union, Dict
+from numba import cuda
 
 def get_ransac_data_from_np_points(np_points: np.ndarray, ransac_iterator: Callable, ransac_iterations: int = 100, threshold: float = 0.1, 
-                                  cuda: bool = False,
                                   verbosity_level: int = 0, inherited_verbose_string: str = "",
                                   seed: int = None) -> Dict:
     '''
@@ -105,31 +105,6 @@ def get_ransac_data_from_np_points(np_points: np.ndarray, ransac_iterator: Calla
         message = f"{inherited_verbose_string} Fitting line to pointcloud: Iteration {current_iteration}/{ransac_iterations}"
         if (verbosity_level == 1 and current_iteration % 10 == 0) or verbosity_level >= 2:
             print(message)
-        if cuda:
-            # Extract x, y, z coordinates from np_points
-            points_x = np_points[:, 0]
-            points_y = np_points[:, 1]
-            points_z = np_points[:, 2]
-            # Convert points_x, points_y, and points_z to contiguous arrays
-            d_points_x = np.ascontiguousarray(points_x)
-            d_points_y = np.ascontiguousarray(points_y)
-            d_points_z = np.ascontiguousarray(points_z)
-            d_points_x = cuda.to_device(d_points_x)
-            d_points_y = cuda.to_device(d_points_y)
-            d_points_z = cuda.to_device(d_points_z)
-            dict_iteration_results = ransac_iterator(np_points, threshold, len(np_points))
-
-            '''
-            points: np.ndarray, 
-            d_points_x: cuda.devicearray.DeviceNDArray, 
-            d_points_y: cuda.devicearray.DeviceNDArray, 
-            d_points_z: cuda.devicearray.DeviceNDArray, 
-            num_points: int, 
-            threshold: float,
-            random_points: np.ndarray) -> dict:
-            '''
-
-
         else:
             dict_iteration_results = ransac_iterator(np_points, threshold, len(np_points))
         if dict_iteration_results["number_inliers"] > max_number_inliers:
@@ -138,6 +113,129 @@ def get_ransac_data_from_np_points(np_points: np.ndarray, ransac_iterator: Calla
         dict_full_results["ransac_iterations_results"].append(dict_iteration_results)
     dict_full_results["ransac_best_iteration_results"] = best_iteration_results
     return dict_full_results
+
+def get_ransac_data_from_np_points_cuda(np_points: np.ndarray, ransac_iterator: Callable, ransac_iterations: int = 100, threshold: float = 0.1, 
+                                  verbosity_level: int = 0, inherited_verbose_string: str = "",
+                                  seed: int = None) -> Dict:
+    '''
+    Gets the ransac data from a file. 
+    
+    The ransac data is a dictionary with the following keys:
+    - ransac_iterations_results: the results of the ransac iterations. It is a list, where each element is a dictionary with the following keys:
+        - current_random_points: the current random points chosen to estimate the line
+        - current_line: the current line estimated from the random points. Right now it is a numpy array with two points, the same as the current_random_points
+        - threshold: the maximum distance from the line to consider a point as an inlier
+        - number_inliers: the number of inliers
+        - indices_inliers: the indices of the inliers in the point cloud
+    - ransac_best_iteration_results: the best iteration results
+
+    :param np_points: The point cloud data.
+    :type np_points: np.ndarray
+    :param ransac_iterator: The ransac iterator.
+    :type ransac_iterator: Callable, function that takes the point cloud data and returns the ransac data.
+    :param ransac_iterations: The number of ransac iterations.
+    :type ransac_iterations: int
+    :param threshold: The threshold.
+    :type threshold: float
+    :param audit_cloud: Whether to audit the cloud.
+    :type audit_cloud: bool
+    :param verbosity_level: The verbosity level.
+    :type verbosity_level: int
+    :param inherited_verbose_string: The inherited verbose string.
+    :type inherited_verbose_string: str
+    :param seed: The seed.
+    :type seed: int
+    :return: The ransac data.
+    :rtype: dict
+
+    :Example:
+
+    ::
+
+        >>> import open3d as o3d
+        >>> import mrdja.ransaclp as ransaclp
+        >>> import mrdja.ransac.coreransac as coreransac
+        >>> office_dataset = o3d.data.OfficePointClouds()
+        >>> office_filename = office_dataset.paths[0]
+        >>> ransac_iterator = coreransac.get_ransac_line_iteration_results
+        >>> ransac_iterations = 200
+        >>> threshold = 0.02
+        >>> seed = 42
+        >>> pcd = o3d.io.read_point_cloud(office_filename)
+        >>> np_points = np.asarray(pcd.points)
+        >>> ransac_data = ransaclp.get_ransac_data_from_filename(np_points, ransac_iterator = ransac_iterator, 
+                                                           ransac_iterations = ransac_iterations, 
+                                                           threshold = threshold, audit_cloud=True, seed = seed)
+        >>> iterations_results = ransac_data["ransac_iterations_results"]
+        >>> len(iterations_results)
+        200
+        >>> first_iteration_results = iterations_results[0]
+        >>> first_iteration_results["current_random_points"]
+        array([[1.88671875, 1.96484375, 1.91060746],
+        [3.18359375, 1.89562058, 2.45703125]])
+        >>> first_iteration_results["current_line"]
+        array([[1.88671875, 1.96484375, 1.91060746],
+        [3.18359375, 1.89562058, 2.45703125]])
+        >>> first_iteration_results["threshold"]
+        0.02
+        >>> first_iteration_results["number_inliers"]
+        203
+        >>> first_iteration_results["indices_inliers"][:5]
+        array([ 58884,  59966,  60516,  61070, 138037])
+        >>> best_iteration_results = ransac_data["ransac_best_iteration_results"]
+        >>> best_iteration_results["current_random_points"]
+        array([[1.85546875, 2.67396379, 2.08203125],
+        [0.85546875, 2.57869077, 2.52734375]])
+        >>> best_iteration_results["current_line"]
+        array([[1.85546875, 2.67396379, 2.08203125],
+        [0.85546875, 2.57869077, 2.52734375]])
+        >>> best_iteration_results["threshold"]
+        0.02
+        >>> best_iteration_results["number_inliers"]
+        2128
+        >>> best_iteration_results["indices_inliers"][:5]
+        array([24335, 25743, 25746, 25897, 26405])
+    '''
+    if seed is not None:
+        np.random.seed(seed)
+
+    dict_full_results = {}
+    dict_full_results["ransac_iterations_results"] = []
+
+    max_number_inliers = 0
+    best_iteration_results = None
+    current_iteration = 0
+    # Extract x, y, z coordinates from np_points
+    points_x = np_points[:, 0]
+    points_y = np_points[:, 1]
+    points_z = np_points[:, 2]
+    # Convert points_x, points_y, and points_z to contiguous arrays
+    d_points_x = np.ascontiguousarray(points_x)
+    d_points_y = np.ascontiguousarray(points_y)
+    d_points_z = np.ascontiguousarray(points_z)
+    d_points_x = cuda.to_device(d_points_x)
+    d_points_y = cuda.to_device(d_points_y)
+    d_points_z = cuda.to_device(d_points_z)
+    random_numbers_pairs = sampling.sampling_np_arrays_from_enumerable(np_points, cardinality_of_np_arrays=2, 
+                                                                       number_of_np_arrays=ransac_iterations, 
+                                                                       num_source_elems=len(np_points), seed=seed)
+
+    for i in range(ransac_iterations):
+        current_iteration += 1
+        message = f"{inherited_verbose_string} Fitting line to pointcloud: Iteration {current_iteration}/{ransac_iterations}"
+        if (verbosity_level == 1 and current_iteration % 10 == 0) or verbosity_level >= 2:
+            print(message)
+
+        random_points = random_numbers_pairs[i]
+        dict_iteration_results = ransac_iterator(np_points, d_points_x, d_points_y, d_points_z, threshold, random_points)
+
+        if dict_iteration_results["number_inliers"] > max_number_inliers:
+            max_number_inliers = dict_iteration_results["number_inliers"]
+            best_iteration_results = dict_iteration_results
+        dict_full_results["ransac_iterations_results"].append(dict_iteration_results)
+    dict_full_results["ransac_best_iteration_results"] = best_iteration_results
+    return dict_full_results
+
 
 def get_ransac_data_from_filename(filename: str, ransac_iterator: Callable, ransac_iterations: int = 100, threshold: float = 0.1, 
                                   audit_cloud: bool = False, verbosity_level: int = 0, inherited_verbose_string: str = "",
@@ -623,14 +721,18 @@ def get_ransaclp_data_from_np_points(np_points: np.ndarray, ransac_iterations: i
         np.random.seed(seed)
     if cuda:
         ransac_iterator = coreransaccuda.get_ransac_line_iteration_results_cuda
+        ransac_data = get_ransac_data_from_np_points_cuda(np_points, ransac_iterator = ransac_iterator,
+                                            ransac_iterations = ransac_iterations,
+                                            threshold = threshold,
+                                            verbosity_level = verbosity_level, 
+                                            inherited_verbose_string=inherited_verbose_string, seed = seed)
     else:
         ransac_iterator = coreransac.get_ransac_line_iteration_results
-    ransac_data = get_ransac_data_from_np_points(np_points, ransac_iterator = ransac_iterator,
-                                                ransac_iterations = ransac_iterations,
-                                                threshold = threshold,
-                                                cuda = cuda, 
-                                                verbosity_level = verbosity_level, 
-                                                inherited_verbose_string=inherited_verbose_string, seed = seed)
+        ransac_data = get_ransac_data_from_np_points(np_points, ransac_iterator = ransac_iterator,
+                                                    ransac_iterations = ransac_iterations,
+                                                    threshold = threshold,
+                                                    verbosity_level = verbosity_level, 
+                                                    inherited_verbose_string=inherited_verbose_string, seed = seed)
 
     pair_lines_number_inliers = get_lines_and_number_inliers_from_ransac_data_from_file(ransac_data)
     ordered_list_sse_plane = get_ordered_list_sse_plane(pair_lines_number_inliers, percentage_best = 0.2, verbosity_level=verbosity_level,
