@@ -10,10 +10,10 @@ import time
 start = time.time()
 
 threshold = 0.02
-# repetitions = 10
-repetitions = 3
-# iterations_list = [100, 200, 300, 400, 500, 600]
-iterations_list = [100, 200]
+repetitions = 10
+# repetitions = 3
+iterations_list = [100, 200, 300, 400, 500, 600]
+# iterations_list = [100, 200]
 percentage_chosen_lines = 0.2
 percentage_chosen_planes = 0.05
 seed = 42

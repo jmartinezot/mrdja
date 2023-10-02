@@ -48,6 +48,7 @@ def get_ransac_data_from_np_points(np_points: np.ndarray, ransac_iterator: Calla
     ::
 
         >>> import open3d as o3d
+        >>> import numpy as np
         >>> import mrdja.ransaclp as ransaclp
         >>> import mrdja.ransac.coreransac as coreransac
         >>> office_dataset = o3d.data.OfficePointClouds()
@@ -58,9 +59,9 @@ def get_ransac_data_from_np_points(np_points: np.ndarray, ransac_iterator: Calla
         >>> seed = 42
         >>> pcd = o3d.io.read_point_cloud(office_filename)
         >>> np_points = np.asarray(pcd.points)
-        >>> ransac_data = ransaclp.get_ransac_data_from_filename(np_points, ransac_iterator = ransac_iterator, 
+        >>> ransac_data = ransaclp.get_ransac_data_from_np_points(np_points, ransac_iterator = ransac_iterator, 
                                                            ransac_iterations = ransac_iterations, 
-                                                           threshold = threshold, audit_cloud=True, seed = seed)
+                                                           threshold = threshold, seed = seed)
         >>> iterations_results = ransac_data["ransac_iterations_results"]
         >>> len(iterations_results)
         200
@@ -661,6 +662,7 @@ def get_ransaclp_data_from_filename(filename: str, ransac_iterations: int = 100,
     results_from_best_plane = coreransac.get_best_fitting_data_from_list_planes(np_points, list_good_planes, threshold)
     return results_from_best_plane
 
+# @profile
 def get_ransaclp_data_from_np_points(np_points: np.ndarray, ransac_iterations: int = 100, threshold: float = 0.1,
                                      cuda: bool = False, 
                                     verbosity_level: int = 0, inherited_verbose_string: str = "", seed: int = None) -> Dict:
@@ -733,11 +735,13 @@ def get_ransaclp_data_from_np_points(np_points: np.ndarray, ransac_iterations: i
                                                     threshold = threshold,
                                                     verbosity_level = verbosity_level, 
                                                     inherited_verbose_string=inherited_verbose_string, seed = seed)
-
     pair_lines_number_inliers = get_lines_and_number_inliers_from_ransac_data_from_file(ransac_data)
     ordered_list_sse_plane = get_ordered_list_sse_plane(pair_lines_number_inliers, percentage_best = 0.2, verbosity_level=verbosity_level,
                                                         inherited_verbose_string=inherited_verbose_string)
     list_sse_plane_05 = get_n_percentile_from_list_sse_plane(ordered_list_sse_plane, percentile = 5)
     list_good_planes = [sse_plane[1] for sse_plane in list_sse_plane_05]
-    results_from_best_plane = coreransac.get_best_fitting_data_from_list_planes(np_points, list_good_planes, threshold)
-    return results_from_best_plane
+    if cuda: 
+        results_from_best_plane = coreransaccuda.get_best_fitting_data_from_list_planes_cuda(np_points, list_good_planes, threshold)
+    else:
+        results_from_best_plane = coreransac.get_best_fitting_data_from_list_planes(np_points, list_good_planes, threshold)
+    return results_from_best_plane, ransac_data

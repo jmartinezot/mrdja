@@ -1,10 +1,21 @@
 import mrdja.ransaclp as ransaclp
 import mrdja.pointcloud as pointcloud
+import mrdja.ransac.coreransac as coreransac
+# import mrdja.ransac.coreransaccuda as coreransaccuda
 from typing import Dict, List
 import numpy as np
 import open3d as o3d
 import glob
 import os
+
+def print_dict_structure(d, indent=0):
+    for key, value in d.items():
+        if isinstance(value, dict):
+            print(' ' * indent + f'[{key}]')  # Print key as a section header
+            print_dict_structure(value, indent + 2)  # Recursively print sub-dictionary
+        else:
+            print(' ' * indent + key)  # Print key
+
 
 def get_baseline(filename: str, threshold: float, n_iterations = 100000) -> Dict:
     '''
@@ -111,7 +122,9 @@ def compute_parameters_ransac_line (line_iterations: int, percentage_chosen_line
     total_iterations = line_iterations + number_chosen_planes
     return {"number_chosen_lines": number_chosen_lines, "number_lines_pairs": number_lines_pairs, "number_chosen_planes": number_chosen_planes, "total_iterations": total_iterations}
 
-def get_data_comparison_ransac_and_ransaclp(filename: str, repetitions: int, iterations_list: List[int], threshold: float, 
+# @profile
+def get_data_comparison_ransac_and_ransaclp(filename: str, 
+                                            repetitions: int, iterations_list: List[int], threshold: float, 
                                             percentage_chosen_lines: float, percentage_chosen_planes: float, 
                                             cuda: bool = False, verbosity_level: int = 0, 
                                             inherited_verbose_string: str = "",
@@ -164,10 +177,10 @@ def get_data_comparison_ransac_and_ransaclp(filename: str, repetitions: int, ite
     dict_all_results["number_pcd_points"] = len(np_points)
     dict_all_results["threshold"] = threshold
 
-    # get the maximum number of iterations
-    max_iterations = max(iterations_list)
-    filename_only_file = os.path.basename(filename)
-    inherited_verbose_string = inherited_verbose_string + filename_only_file + " "
+    # order iterations_list in descending order
+    iterations_list.sort(reverse=True)
+    max_iterations = iterations_list[0]
+    ransaclp_full_data_from_maximum_number_of_iterations = [[]] * repetitions
 
     for index, num_iterations in enumerate(iterations_list):
         inherited_verbose_string_in_first_loop = f"{inherited_verbose_string} Current max RANSAC iterations {num_iterations} {index+1}/{len(iterations_list)}"
@@ -181,17 +194,38 @@ def get_data_comparison_ransac_and_ransaclp(filename: str, repetitions: int, ite
         dict_line_RANSAC_results_list = list()
 
         current_repetition = 0
+        
         for j in range(repetitions):
             current_repetition = current_repetition + 1
             inherited_verbose_string_in_second_loop = f"{inherited_verbose_string_in_first_loop} Repetition {current_repetition}/{repetitions} "
-            ransaclp_data_from_file = ransaclp.get_ransaclp_data_from_np_points(np_points, ransac_iterations = num_iterations, 
+            # if index == 0:
+            ransaclp_best_data, ransaclp_full_data = ransaclp.get_ransaclp_data_from_np_points(np_points, ransac_iterations = num_iterations, 
                                                            threshold = threshold,
                                                            cuda = cuda,
                                                            verbosity_level = verbosity_level, 
                                                            inherited_verbose_string = inherited_verbose_string_in_second_loop,
                                                            seed = None)
-            ransaclp_number_inliers = ransaclp_data_from_file["number_inliers"]
-            ransaclp_plane = ransaclp_data_from_file["plane"]
+            '''
+                ransaclp_full_data_from_maximum_number_of_iterations[j] = ransaclp_full_data
+            else:
+                ransaclp_full_data = ransaclp_full_data_from_maximum_number_of_iterations[j]
+                ransaclp_current_iterations_full_data = {}
+                ransaclp_current_iterations_results = ransaclp_full_data["ransac_iterations_results"][:num_iterations]
+                ransaclp_current_best_iterations_results = max(ransaclp_current_iterations_results, key=lambda x:x["number_inliers"])
+                ransaclp_current_iterations_full_data["ransac_iterations_results"] = ransaclp_current_iterations_results
+                ransaclp_current_iterations_full_data["ransac_best_iteration_results"] = ransaclp_current_best_iterations_results
+                pair_lines_number_inliers = ransaclp.get_lines_and_number_inliers_from_ransac_data_from_file(ransaclp_current_iterations_full_data)
+                ordered_list_sse_plane = ransaclp.get_ordered_list_sse_plane(pair_lines_number_inliers, percentage_best = 0.2, verbosity_level=verbosity_level,
+                                                        inherited_verbose_string=inherited_verbose_string)
+                list_sse_plane_05 = ransaclp.get_n_percentile_from_list_sse_plane(ordered_list_sse_plane, percentile = 5)
+                list_good_planes = [sse_plane[1] for sse_plane in list_sse_plane_05]
+                if cuda: 
+                    ransaclp_best_data = coreransaccuda.get_best_fitting_data_from_list_planes_cuda(np_points, list_good_planes, threshold)
+                else:
+                    ransaclp_best_data= coreransac.get_best_fitting_data_from_list_planes(np_points, list_good_planes, threshold)
+            '''
+            ransaclp_number_inliers = ransaclp_best_data["number_inliers"]
+            ransaclp_plane = ransaclp_best_data["plane"]
             
             ransac_plane, inliers = pcd.segment_plane(distance_threshold=threshold,
                                                     ransac_n=3,

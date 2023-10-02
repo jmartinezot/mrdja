@@ -6,7 +6,7 @@ import mrdja.sampling as sampling
 import numpy as np
 import numba
 from time import time
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 import sys
 import mrdja.geometry as geom
 
@@ -226,7 +226,6 @@ def get_how_many_and_which_below_threshold_between_plane_and_points_and_their_in
     :return: The number of points below the threshold and their indices.
     :rtype: Tuple[int, List[int]]
     """
-    t1 = time()
     a = plane[0]
     b = plane[1]
     c = plane[2]
@@ -241,19 +240,13 @@ def get_how_many_and_which_below_threshold_between_plane_and_points_and_their_in
     blockspergrid = math.ceil(num_points / threadsperblock)
     # point_indices = cuda.device_array(point_indices.shape, dtype=point_indices.dtype)
     d_point_indices = cuda.to_device(point_indices)
-    t2 = time()
     get_how_many_and_which_below_threshold_kernel[blockspergrid, threadsperblock](d_points_x, d_points_y, d_points_z, a, b, c, d, optimized_threshold, d_point_indices)
-    t3 = time()
     point_indices = d_point_indices.copy_to_host()
     # get the count of point_indices that are not -1
     count = np.count_nonzero(point_indices != -1)
     # get the indices of the points that are not -1
     new_indices = np.where(point_indices != -1)
     new_indices = new_indices[0].tolist()
-    t4 = time()
-    print(f't2 - t1: {(t2-t1):.4f}s')
-    print(f't3 - t2: {(t3-t2):.4f}s')
-    print(f't4 - t3: {(t4-t3):.4f}s')
     return count, new_indices
 
 # OK
@@ -284,7 +277,6 @@ def get_how_many_below_threshold_between_plane_and_points_cuda(
     :return: The number of points below the threshold and their indices.
     :rtype: Tuple[int, List[int]]
     """
-    # t1 = time()
     a = plane[0]
     b = plane[1]
     c = plane[2]
@@ -298,16 +290,10 @@ def get_how_many_below_threshold_between_plane_and_points_cuda(
     max_threads_per_block = cuda.get_current_device().MAX_THREADS_PER_BLOCK
     threadsperblock = min(max_threads_per_block, threadsperblock)
     blockspergrid = math.ceil(num_points / threadsperblock)
-    # t2 = time()
     get_how_many_below_threshold_kernel[blockspergrid, threadsperblock](d_points_x, d_points_y, d_points_z, a, b, c, d, optimized_threshold, d_result)
-    # t3 = time()
     # Copy the result back to the host
     cuda.synchronize()
     result = d_result.copy_to_host()[0]
-    # t4 = time()
-    # print(f't2 - t1: {(t2-t1):.4f}s')
-    # print(f't3 - t2: {(t3-t2):.4f}s')
-    # print(f't4 - t3: {(t4-t3):.4f}s')
     return result
 
 def get_ransac_line_iteration_results_cuda(points: np.ndarray, 
@@ -340,17 +326,12 @@ def get_ransac_line_iteration_results_cuda(points: np.ndarray,
     :return: Dictionary with the plane parameters, the number of inliers, and the indices of the inliers.
     :rtype: dict
     """
-    t1 = time()
-    # esto es lo que tarda mucho
+    # this takes a lot of time
     if random_points is None:
         current_random_points = sampling.sampling_np_arrays_from_enumerable(points, cardinality_of_np_arrays=2, number_of_np_arrays=1, num_source_elems=len(points), seed=None)[0]
     else:
         current_random_points = random_points
-    t2 = time()
     current_line = (tuple(current_random_points[0]), tuple(current_random_points[1]))
-    t3 = time()
-    print(f't2 - t1: {(t2-t1):.4f}s')
-    print(f't3 - t2: {(t3-t2):.4f}s')
     how_many_in_line = get_how_many_below_threshold_between_line_and_points_cuda(points, d_points_x, d_points_y, d_points_z, current_line, threshold)
     return {"current_line": current_random_points, "threshold": threshold, "number_inliers": how_many_in_line}
 
@@ -387,16 +368,10 @@ def get_ransac_iteration_results_cuda(points: np.ndarray,
     :return: Dictionary with the plane parameters, the number of inliers, and the indices of the inliers.
     :rtype: dict
     """
-    t1 = time()
     # esto es lo que tarda mucho
     current_random_points = crs.get_np_array_of_three_random_points_from_np_array_of_points(points, num_points)
-    t2 = time()
     current_plane = geom.get_plane_from_list_of_three_points(current_random_points.tolist())
-    t3 = time()
-    print(f't2 - t1: {(t2-t1):.4f}s')
-    print(f't3 - t2: {(t3-t2):.4f}s')
     how_many_in_plane, current_point_indices = get_how_many_below_threshold_between_plane_and_points_and_their_indices_cuda(points, points_x, points_y, points_z, d_points_x, d_points_y, d_points_z, current_plane, threshold)
-    print(num_points, current_random_points, current_plane, how_many_in_plane)
     return {"current_plane": current_plane, "number_inliers": how_many_in_plane, "indices_inliers": current_point_indices}
 
 
@@ -453,7 +428,6 @@ def get_ransac_results_cuda(points, num_points, threshold, num_iterations):
         >>> outlier_cloud = pcd.select_by_index(inliers, invert=True)
         >>> o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
     """
-    t1 = time()
     best_plane = None
     number_points_in_best_plane = 0
     points_x = np.ascontiguousarray(points[:, 0])
@@ -463,18 +437,11 @@ def get_ransac_results_cuda(points, num_points, threshold, num_iterations):
     d_points_y = cuda.to_device(points_y)
     d_points_z = cuda.to_device(points_z)
     indices_inliers = None
-    t110 = time()
-    print("Time to copy data to GPU ", t110 - t1)
     for _ in range(num_iterations):
-        t3 = time()
         dict_results = get_ransac_iteration_results_cuda(points, points_x, points_y, points_z, d_points_x, d_points_y, d_points_z, num_points, threshold)
-        t5 = time()
-        print("Time to call RANSAC iteration CUDA: ", t5 - t3)
         current_plane = dict_results["current_plane"]
         how_many_in_plane = dict_results["number_inliers"]
         current_indices_inliers = dict_results["indices_inliers"]
-        t6 = time()
-        print("Time to compute extract values from dictionary ", t6 - t5)
         if how_many_in_plane > number_points_in_best_plane:
             # inliers_ratio = how_many_in_plane / num_points
             # max_num_iterations = crsu.compute_number_iterations(inliers_ratio, alpha = 0.05)
@@ -482,10 +449,120 @@ def get_ransac_results_cuda(points, num_points, threshold, num_iterations):
             number_points_in_best_plane = how_many_in_plane
             best_plane = current_plane
             indices_inliers = current_indices_inliers
-        t4 = time()
-        print("Time to compute RANSAC iteration: ", t4 - t3)
     if indices_inliers is None:
         indices_inliers = np.empty(0, dtype=np.int64)
-    t2 = time()
-    print("Time to compute RANSAC: ", t2 - t1)
     return {"best_plane": best_plane, "number_inliers": number_points_in_best_plane, "indices_inliers": indices_inliers}
+
+def get_fitting_data_from_list_planes_cuda(points: np.ndarray, list_planes: List[np.ndarray], threshold: float) -> List[Dict]:
+    '''
+    Returns the fitting data for each plane in the list of planes.
+
+    :param points: The collection of points to fit the plane to.
+    :type points: np.ndarray
+    :param list_planes: The list of planes to fit to the points.
+    :type list_planes: List[np.ndarray]
+    :param threshold: The maximum distance from a point to the plane for it to be considered an inlier.
+    :type threshold: float
+    :return: A list of dictionaries containing the plane parameters, number of inliers, and their indices.
+    :rtype: List[Dict]
+
+    :Example:
+
+    ::
+
+        >>> import mrdja.ransac.coreransac as coreransac
+        >>> import open3d as o3d
+        >>> import numpy as np
+        >>> import random
+        >>> import open3d as o3d
+        >>> dataset = o3d.data.OfficePointClouds()
+        >>> pcds_offices = []
+        >>> for pcd_path in dataset.paths:
+        >>>     pcds_offices.append(o3d.io.read_point_cloud(pcd_path))
+        >>> office_pcd = pcds_offices[0]
+        >>> pcd_points = np.asarray(office_pcd.points)
+        >>> threshold = 0.1
+        >>> num_iterations = 20
+        >>> dict_results = coreransac.get_ransac_plane_results(pcd_points, threshold, num_iterations, seed = 42)
+        >>> dict_results
+        {'best_plane': array([-0.17535096,  0.45186984, -2.44615646,  5.69205427]),
+        'number_inliers': 153798,
+        'indices_inliers': array([     0,      1,      2, ..., 248476, 248477, 248478])}
+        >>> fitting_data = coreransac.get_fitting_data_from_list_planes(pcd_points, [dict_results["best_plane"]], threshold)
+        >>> fitting_data
+        [{'plane': array([-0.17535096,  0.45186984, -2.44615646,  5.69205427]),
+        'number_inliers': 153798,
+        'indices_inliers': array([     0,      1,      2, ..., 248476, 248477, 248478])}]
+    ''' 
+    # Extract x, y, z coordinates from np_points
+    points_x = points[:, 0]
+    points_y = points[:, 1]
+    points_z = points[:, 2]
+    # Convert points_x, points_y, and points_z to contiguous arrays
+    d_points_x = np.ascontiguousarray(points_x)
+    d_points_y = np.ascontiguousarray(points_y)
+    d_points_z = np.ascontiguousarray(points_z)
+    d_points_x = cuda.to_device(d_points_x)
+    d_points_y = cuda.to_device(d_points_y)
+    d_points_z = cuda.to_device(d_points_z)
+
+    list_fitting_data = []
+    for plane in list_planes:
+        how_many_in_plane, indices_inliers = get_how_many_and_which_below_threshold_between_plane_and_points_and_their_indices_cuda(points, 
+                                                                                                        d_points_x=d_points_x,
+                                                                                                        d_points_y=d_points_y,
+                                                                                                        d_points_z=d_points_z,
+                                                                                                        plane = plane, 
+                                                                                                        threshold = threshold)
+        list_fitting_data.append({"plane": plane, "number_inliers": how_many_in_plane, "indices_inliers": indices_inliers})
+    return list_fitting_data
+
+def get_best_fitting_data_from_list_planes_cuda(points: np.ndarray, list_planes: List[np.ndarray], threshold: float) -> Dict:
+    '''
+    Returns the fitting data for the best plane in the list of planes.
+
+    :param points: The collection of points to fit the plane to.
+    :type points: np.ndarray
+    :param list_planes: The list of planes to fit to the points.
+    :type list_planes: List[np.ndarray]
+    :param threshold: The maximum distance from a point to the plane for it to be considered an inlier.
+    :type threshold: float
+    :return: A dictionary containing the plane parameters, number of inliers, and their indices.
+    :rtype: Dict
+
+    :Example:
+
+    ::
+
+        >>> import mrdja.ransac.coreransac as coreransac
+        >>> import open3d as o3d
+        >>> import numpy as np
+        >>> import random
+        >>> import open3d as o3d
+        >>> dataset = o3d.data.OfficePointClouds()
+        >>> pcds_offices = []
+        >>> for pcd_path in dataset.paths:
+        >>>     pcds_offices.append(o3d.io.read_point_cloud(pcd_path))
+        >>> office_pcd = pcds_offices[0]
+        >>> pcd_points = np.asarray(office_pcd.points)
+        >>> threshold = 0.1
+        >>> num_iterations = 20
+        >>> dict_results = coreransac.get_ransac_plane_results(pcd_points, threshold, num_iterations, seed = 42)
+        >>> dict_results
+        {'best_plane': array([-0.17535096,  0.45186984, -2.44615646,  5.69205427]),
+        'number_inliers': 153798,
+        'indices_inliers': array([     0,      1,      2, ..., 248476, 248477, 248478])}
+        >>> fitting_data = coreransac.get_fitting_data_from_list_planes(pcd_points, [dict_results["best_plane"]], threshold)
+        >>> fitting_data
+        [{'plane': array([-0.17535096,  0.45186984, -2.44615646,  5.69205427]),
+        'number_inliers': 153798,
+        'indices_inliers': array([     0,      1,      2, ..., 248476, 248477, 248478])}]
+        >>> best_fitting_data = coreransac.get_best_fitting_data_from_list_planes(pcd_points, [dict_results["best_plane"]], threshold)
+        >>> best_fitting_data
+        {'plane': array([-0.17535096,  0.45186984, -2.44615646,  5.69205427]),
+        'number_inliers': 153798,
+        'indices_inliers': array([     0,      1,      2, ..., 248476, 248477, 248478])}
+    '''
+    fitting_data = get_fitting_data_from_list_planes_cuda(points, list_planes, threshold)
+    best_fitting_data = max(fitting_data, key=lambda fitting_data: fitting_data["number_inliers"])
+    return best_fitting_data
