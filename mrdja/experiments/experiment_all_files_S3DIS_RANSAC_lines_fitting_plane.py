@@ -7,6 +7,19 @@ import glob
 database_path = "/home/scpmaotj/Stanford3dDataset_v1.2/"
 ply_files = glob.glob(database_path + "/**/*.ply", recursive=True)
 
+'''
+# check if a file has been modified in the last 24 hours
+def file_is_recent(filename):
+    import datetime
+    import os
+    now = datetime.datetime.now()
+    file_modified = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
+    return (now - file_modified).days < 1
+
+# remove the files in ply_files if a pkl file with the same name exists and it has been modified in the last 24 hours
+ply_files = [filename for filename in ply_files if not file_is_recent(filename.replace(".ply", ".pkl"))]
+'''
+
 total_files = len(ply_files)
 
 threshold = 0.02

@@ -5,22 +5,25 @@ import numpy as np
 import glob
 from mrdja.stats import friedman_nemenyi_test
 
-# Define the directory where the data files are located
-data_dir = "/home/scpmaotj/pkl_files/me/"  # replace with your directory
+results_path = "/home/scpmaotj/Github/mrdja/results_experiments_ransaclp/S3DIS" 
+pkl_files = glob.glob(results_path + "/**/*.pkl", recursive=True)
 
 # Initialize an empty dictionary to hold all the data
 all_data = {}
-
-# Iterate over all files in the directory that match the pattern '*means*.pkl'
-for file_path in glob.glob(os.path.join(data_dir, '*percentage*.pkl')):
+  
+for file_path in pkl_files:
     # Load data from the current file
     with open(file_path, 'rb') as f:
         data = pickle.load(f)
-    
-    # Add the loaded data to the all_data dictionary
-    all_data[os.path.basename(file_path)] = data
+        # data is a dict. Remove all the keys that are not mean*
+        data = {key: data[key] for key in data.keys() if key.startswith("mean")}
+    print(data)
+    # retain only the last two sub directories and the filename of file_path
+    file_path = "/".join(file_path.split("/")[-3:])
+    all_data[file_path] = data
 
 # Convert the dictionary of dictionaries into a DataFrame
+
 df = pd.DataFrame(all_data).T
 
 results = friedman_nemenyi_test(df)
@@ -40,6 +43,5 @@ print("Nemenyi df:\n", nemenyi_df)
 print("Nemenyi table:\n", nemenyi_table)
 print("Nemenyi df 2:\n", nemenyi_df_2)
 print("Nemenyi table 2:\n", nemenyi_table_2)
-
 
 

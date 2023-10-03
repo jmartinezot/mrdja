@@ -1,7 +1,29 @@
 import pandas as pd
 import numpy as np
 from scipy.stats import friedmanchisquare
-from scikit_posthocs import posthoc_nemenyi
+from scikit_posthocs import posthoc_nemenyi_friedman as posthoc_nemenyi
+import pingouin as pg
+
+
+def friedman_dunn_test(dataframe):
+    # Make a copy of the dataframe to avoid modifying the original one
+    df = dataframe.copy()
+    # Transpose the DataFrame to get the algorithms as rows and datasets as columns
+    df = df.T
+    # Perform the Friedman test
+    friedman_result = pg.friedman(df)
+
+    # Display the Friedman test results
+    print(friedman_result)
+    # Get the p-value from the Friedman test result
+    friedman_pvalue = friedman_result['p-unc'][0]
+
+    # Perform the Bonferroni-Dunn post hoc test
+    posthoc_dunn = pg.pairwise_ttests(data=df, parametric=False, padjust='bonferroni')
+
+    # Display the post hoc test results
+    print(posthoc_dunn)
+
 
 def friedman_nemenyi_test(dataframe):
     # Make a copy of the dataframe to avoid modifying the original one
@@ -27,6 +49,8 @@ def friedman_nemenyi_test(dataframe):
     # Transpose the DataFrame to get the algorithms as rows and datasets as columns
     df = df.T
 
+    print(df)
+
     # Perform Nemenyi posthoc test
     nemenyi_result = posthoc_nemenyi(df.values)
     nemenyi_result.columns = df.index
@@ -34,6 +58,8 @@ def friedman_nemenyi_test(dataframe):
 
     # Create a DataFrame of the Nemenyi results
     nemenyi_df = pd.DataFrame(nemenyi_result)
+    print("nemenyi_df")
+    print(nemenyi_df)
 
     # Create a custom function to convert the DataFrame to a LaTeX table
     def to_latex_custom(df, means):
