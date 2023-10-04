@@ -26,12 +26,43 @@ for file_path in pkl_files:
 
 df = pd.DataFrame(all_data).T
 
-results = friedman_nemenyi_test(df)
+# remove "mean\_number\_inliers\_line\_" from the start of the column names
+df.columns = df.columns.str.replace("mean_number_inliers_", "")
+df.columns = df.columns.str.replace("line_RANSAC_", "RANSAC-LP-")
+df.columns = df.columns.str.replace("standard_RANSAC_", "RANSAC-")
 
-nemenyi_df = results["nemenyi_df"]
-nemenyi_table = results["nemenyi_table"]
+# divide all the columns by the column "RANSAC-109"
+# df = df.div(df["RANSAC-109"], axis=0)
+df = df.div(df["RANSAC-109"], axis=0)
+
+# substract 1 from all the columns and multiply by 100
+df = (df - 1) * 100
+# get the mean of all columns
+df2 = df.mean(axis=0)
+
+print("original df")
+print(df2)
+print("original df columns")
+
+df2 = df.rank(axis=1, method='min', ascending=True)
+#results = friedman_nemenyi_test(df)
+
+print("original df")
+print(df2)
+print("original df columns last before friedman")
+
+# order the columns in df2 by name
+df2 = df2.reindex(sorted(df2.columns), axis=1)
+# reverse the order of the columns
+df2 = df2.iloc[:, ::-1]
+print("original df")
+print(df2)
+print("original df columns")
+results = friedman_nemenyi_test(df2, already_transposed=True, filename="nemenyi_s3dis.png")
 friedman_result = results["friedman_result"]
 mean_ranks = results["mean_ranks"]
+nemenyi_df = results["nemenyi_df"]
+nemenyi_table = results["nemenyi_table"]
 nemenyi_result = results["nemenyi_result"]
 nemenyi_df_2 = results["nemenyi_df_2"]
 nemenyi_table_2 = results["nemenyi_table_2"]
@@ -43,5 +74,4 @@ print("Nemenyi df:\n", nemenyi_df)
 print("Nemenyi table:\n", nemenyi_table)
 print("Nemenyi df 2:\n", nemenyi_df_2)
 print("Nemenyi table 2:\n", nemenyi_table_2)
-
-
+print(df2.columns)
