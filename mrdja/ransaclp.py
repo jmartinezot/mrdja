@@ -389,7 +389,7 @@ def get_ransac_data_from_filename(filename: str, ransac_iterator: Callable, rans
                                                                  inherited_verbose_string = inherited_verbose_string,
                                                                  seed = seed)
 
-    dict_full_results += dict_results_from_np_points
+    dict_full_results.update(dict_results_from_np_points)
     return dict_full_results
 
 # create a function that returns all the current_line along with their number_inliers

@@ -71,3 +71,66 @@ dict_results = pointcloud_audit(pcd)
 print(dict_results)
 o3d.visualization.draw_geometries([pcd])
 """
+
+def get_pointcloud_after_substracting_point_cloud(pcd: o3d.geometry.PointCloud, substract: o3d.geometry.PointCloud,
+                                                  threshold: float = 0.05) -> o3d.geometry.PointCloud:
+    """
+    Substracts one pointcloud from another. It removes all the points of the first pointcloud that are
+    closer than *threshold* to some point of the second pointcloud.
+
+    :param pcd: Pointcloud to substract from.
+    :type pcd: o3d.geometry.PointCloud
+    :param substract: Pointcloud to substract.
+    :type substract: o3d.geometry.PointCloud
+    :param threshold: If a point of the first pointcloud is closer to some point of the second pointcloud than this value, the point is removed.
+    :type threshold: float
+    :return: The results after substracting the second pointcloud from the first pointcloud.
+    :rtype: o3d.geometry.PointCloud
+
+    :Example:
+
+    ::
+
+        >>> import mrdja.pointcloud as pointcloud
+        >>> import open3d as o3d
+        >>> import numpy as np
+        >>> np.random.seed(42)
+        >>> mesh_box = o3d.geometry.TriangleMesh.create_box(width=1.0, height=5.0, depth=1.0)
+        >>> pcd_1 = mesh_box.sample_points_uniformly(number_of_points = 10000)
+        >>> mesh_box = o3d.geometry.TriangleMesh.create_box(width=1.5, height=4.0, depth=0.5)
+        >>> pcd_2 = mesh_box.sample_points_uniformly(number_of_points = 10000)
+        >>> pcd_1.paint_uniform_color([1, 0, 0])
+        >>> pcd_2.paint_uniform_color([0, 1, 0])
+        >>> pcd_1_minus_pcd_2 = pointcloud.get_pointcloud_after_substracting_point_cloud(pcd_1, pcd_2, threshold = 0.02)
+        >>> pcd_1_minus_pcd_2
+        PointCloud with 5861 points.
+        >>> o3d.visualization.draw_geometries([pcd_1, pcd_2])
+        >>> o3d.visualization.draw_geometries([pcd_1_minus_pcd_2])
+        >>> pcd_2_minus_pcd_1 = pointcloud.get_pointcloud_after_substracting_point_cloud(pcd_2, pcd_1, threshold = 0.02)
+        >>> pcd_2_minus_pcd_1
+        PointCloud with 4717 points.
+        >>> o3d.visualization.draw_geometries([pcd_2_minus_pcd_1])
+    """
+
+    def aux_func(x, y, z):
+        [_, _, d] = pcd_tree.search_knn_vector_3d([x, y, z], knn=1)
+        return d[0]
+
+    pcd_tree = o3d.geometry.KDTreeFlann(substract)
+    points = np.asarray(pcd.points)
+    if len(pcd.colors) == 0:
+        remaining_points = [point for point in points if
+                            aux_func(point[0], point[1], point[2]) > threshold]
+        pcd_result = o3d.geometry.PointCloud()
+        pcd_result.points = o3d.utility.Vector3dVector(np.asarray(remaining_points))
+        return pcd_result
+    colors = np.asarray(pcd.colors)
+    remaining_points_and_colors = [(point, color) for point, color in zip(points, colors) if
+                                   aux_func(point[0], point[1], point[2]) > threshold]
+    remaining_points = [item[0] for item in remaining_points_and_colors]
+    remaining_colors = [item[1] for item in remaining_points_and_colors]
+    pcd_result = o3d.geometry.PointCloud()
+    pcd_result.points = o3d.utility.Vector3dVector(np.asarray(remaining_points))
+    pcd_result.colors = o3d.utility.Vector3dVector(np.asarray(remaining_colors))
+    return pcd_result
+   

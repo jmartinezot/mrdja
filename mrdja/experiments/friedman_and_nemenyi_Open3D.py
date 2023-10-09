@@ -61,7 +61,7 @@ df2 = df2.iloc[:, ::-1]
 print("original df")
 print(df2)
 print("original df columns")
-results = friedman_nemenyi_test(df2, already_transposed=True, filename="nemenyi_open3d.jpg")
+results = friedman_nemenyi_test(df2, already_transposed=True, filename="nemenyi_open3d.png")
 friedman_result = results["friedman_result"]
 mean_ranks = results["mean_ranks"]
 nemenyi_df = results["nemenyi_df"]
