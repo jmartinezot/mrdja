@@ -341,14 +341,18 @@ def get_pointclouds_of_inliers_of_lines_along_with_plane(pcd: o3d.geometry.Point
     result["inliers_plane"] = inliers_plane
     return result
 
-def show_list_of_inliers_pcd(pcd: o3d.geometry.PointCloud, list_inliers: List[o3d.geometry.PointCloud], threshold: float = 0.001, color: List[float] = [1, 0, 0], lines = None):
+def show_list_of_inliers_pcd(pcd: o3d.geometry.PointCloud, list_inliers: List[o3d.geometry.PointCloud], 
+                             threshold: float = 0.001, color: List[float] = [1, 0, 0], 
+                             lines = None, list_colors: List[List[float]] = None):
     '''
     Show the list of inliers point clouds along with the original point cloud. The inliers are painted in "color".
     The outliers is the original point cloud once substrated the inliers.
     '''
     outliers = pcd
-    for inliers in list_inliers:
+    for index, inliers in enumerate(list_inliers):
         outliers = pointcloud.get_pointcloud_after_substracting_point_cloud(outliers, inliers, threshold = threshold)
+        if list_colors is not None:
+            color = list_colors[index]
         inliers.paint_uniform_color(color)
     if lines is not None:
         aux = list_inliers + [outliers]
@@ -360,7 +364,7 @@ def show_list_of_inliers_pcd(pcd: o3d.geometry.PointCloud, list_inliers: List[o3
     return list_inliers + [outliers]
 
 
-def get_processing_examples(filename_pcd: str, threshold: float, iterations: int, percentage_chosen_lines: float, percentage_chosen_planes: float):
+def get_processing_examples(filename_pcd: str, threshold: float, iterations: int, percentage_chosen_lines: float, percentage_chosen_planes: float, indices: np.ndarray):
     '''
     Get the pointclouds of the inliers of the lines that are in indices index_1 and index_2 according to the best number of inliers, 
     along with the equation of the plane that best fits the two lines.
@@ -385,13 +389,15 @@ def get_processing_examples(filename_pcd: str, threshold: float, iterations: int
         >>> import mrdja.ransaclpexperiments as experiments
         >>> import pickle as pkl
         >>> import open3d as o3d
-        >>> filename_pcd = "/home/scpmaotj/open3d_data/extract/OfficePointClouds/cloud_bin_0.ply"
+        >>> filename_pcd = "/home/scpmaotj/open3d_data/extract/OfficePointClouds/cloud_bin_10.ply"
         >>> threshold = 0.02
-        >>> iterations = 100
+        >>> iterations = 600
         >>> percentage_chosen_lines = 0.2
         >>> percentage_chosen_planes = 0.05
-        >>> results = experiments.get_processing_examples(filename_pcd, threshold, iterations, percentage_chosen_lines, percentage_chosen_planes)
-        >>> # SEGUIR AQUI EL MARTES
+        >>> indices = [0, 10]
+        >>> # indices = [0, 1]
+        >>> # indices = [50, 51]
+        >>> results = experiments.get_processing_examples(filename_pcd, threshold, iterations, percentage_chosen_lines, percentage_chosen_planes, indices = indices)
         >>> inliers_o3d = results["inliers_o3d"]
         >>> outliers_o3d = results["outliers_o3d"]
         >>> # inliers in red
@@ -404,6 +410,8 @@ def get_processing_examples(filename_pcd: str, threshold: float, iterations: int
     pcd = o3d.io.read_point_cloud(filename_pcd)
     np_points = np.asarray(pcd.points)
 
+    index_1 = indices[0]
+    index_2 = indices[1]
 
     verbosity_level = 0
     inherited_verbose_string = ""
@@ -417,21 +425,23 @@ def get_processing_examples(filename_pcd: str, threshold: float, iterations: int
     ransac_iterations_results = ransac_data["ransac_iterations_results"]
     # ransac_iterations_results is a list of dictionaries;m order it by "number_inliers"
     ransac_iterations_results.sort(key=lambda x:x["number_inliers"], reverse=True)
-    line1 = ransac_iterations_results[0]["current_line"]
-    line2 = ransac_iterations_results[1]["current_line"]
+    line1 = ransac_iterations_results[index_1]["current_line"]
+    line2 = ransac_iterations_results[index_2]["current_line"]
     d = get_pointclouds_of_inliers_of_lines_along_with_plane(pcd, line1, line2, threshold = threshold)
     inliers_line_1 = d["inliers_line1"]
     inliers_line_2 = d["inliers_line2"]
     list_inliers = [inliers_line_1, inliers_line_2]
-    final_pointcloud = show_list_of_inliers_pcd(pcd, list_inliers)
+    final_pointcloud = show_list_of_inliers_pcd(pcd, list_inliers, threshold=0.001)
     plane = d["plane"]
     inliers_plane = d["inliers_plane"]
     list_inliers = [inliers_plane]
-    final_pointcloud = show_list_of_inliers_pcd(pcd, list_inliers)
+    final_pointcloud = show_list_of_inliers_pcd(pcd, list_inliers, color = [0, 1, 0], threshold=0.001)
     # compute centroid of pcd
     centroid = np.mean(np_points, axis=0)
     lines = drawing.draw_plane_as_lines_open3d(*plane, external_point=centroid, size=1.5, grid_density=40, line_color=[0, 0, 1])
-    final_pointcloud = show_list_of_inliers_pcd(pcd, list_inliers, lines = lines)
+    list_inliers = [inliers_line_1, inliers_line_2, inliers_plane]
+    list_colors = [[1, 0, 0], [1, 0, 0], [0, 1, 0]]
+    final_pointcloud = show_list_of_inliers_pcd(pcd, list_inliers, list_colors = list_colors, lines = lines)
     '''
     for index, ransac_iteration_result in enumerate(ransac_iterations_results):
         inliers_line_1 = pcd.select_by_index(ransac_iterations_results[0]["indices_inliers"])
