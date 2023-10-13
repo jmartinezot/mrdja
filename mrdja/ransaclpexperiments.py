@@ -396,7 +396,7 @@ def get_processing_examples(filename_pcd: str, threshold: float, iterations: int
         >>> percentage_chosen_planes = 0.05
         >>> indices = [0, 10]
         >>> # indices = [0, 1]
-        >>> # indices = [50, 51]
+        >>> indices = [50, 51]
         >>> results = experiments.get_processing_examples(filename_pcd, threshold, iterations, percentage_chosen_lines, percentage_chosen_planes, indices = indices)
         >>> inliers_o3d = results["inliers_o3d"]
         >>> outliers_o3d = results["outliers_o3d"]
