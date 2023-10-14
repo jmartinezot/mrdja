@@ -6,6 +6,121 @@ import pingouin as pg
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.colors import ListedColormap
+import pyreadr
+import subprocess
+import os
+
+# Create a custom function to convert the DataFrame to good data for a heatmap
+# the values < 0.05 and "good" for the algorithm in the column are going to be 2 - value
+# the values < 0.05 and "bad" for the algorithm in the row are going to be value
+# the rest of values are going to be 1
+# this function returns a DataFrame with the same shape as the original one
+# always keep track of the name of the row and column of each cell,
+# because the heatmap will be created using the row and column names
+# a value is good if means[row_name] > means[col_name]
+# a value is bad if means[row_name] < means[col_name]
+def to_heatmap_custom(df, means):
+    heatmap_data = pd.DataFrame(1, index=df.index, columns=df.columns)
+    for i, row_name in enumerate(df.index):
+        for j, col_name in enumerate(df.columns):
+            value = df.loc[row_name, col_name]
+            if value < 0.05:
+                heatmap_data.loc[row_name, col_name] = 2 - value if means[i] > means[j] else value 
+            if i == j:
+                heatmap_data.loc[row_name, col_name] = 3      
+    return heatmap_data
+
+def to_image_custom(df_original, df_heatmap_data, filename, df_p_values = None):
+    # Create a colormap from the list of colors
+    cmap = ListedColormap(['red', 'gray', 'green', 'white'])
+    sns.set(font_scale=1.2)
+    plt.figure(figsize=(12, 10))
+    col_labels = df_original.columns
+    row_labels = df_original.index
+    plt.tick_params(axis='both', which='major', labelsize=10, labelbottom=False, bottom=False, top=False, labeltop=True)
+    # Create a copy of the p-values DataFrame to format the non-empty values
+    p_values_formatted = df_p_values.copy()
+    # Iterate over rows and columns to format non-empty values
+    for i, row_name in enumerate(df_p_values.index):
+        for j, col_name in enumerate(df_p_values.columns):
+            val = df_p_values.loc[row_name, col_name]
+            if val != "":
+                p_values_formatted.loc[row_name, col_name] = f"{float(val):.2f}"
+
+    if df_p_values is not None:
+        sns.heatmap(df_heatmap_data, fmt="", linewidths=.5, cbar=False, cmap=cmap, xticklabels=col_labels, yticklabels=row_labels, annot=p_values_formatted.values)  # Use df_p_values as annotations
+    else:
+        sns.heatmap(df_heatmap_data, fmt="d", linewidths=.5, cbar=False, cmap=cmap, xticklabels=col_labels, yticklabels=row_labels)
+    # save the figure
+    plt.savefig(filename, bbox_inches='tight')
+    plt.show()
+
+def friedman_shaffer_scmamp(df):
+    '''
+    This function performs the Friedman test and the Shaffer post hoc test
+    using the scmamp package.
+
+    :param df: a pandas DataFrame with the results of the experiments
+    :type df: pandas.DataFrame
+    :return: a dictionary with the results of the Friedman test and the Shaffer post hoc test
+    :rtype: dict
+    '''
+    # Create a R script to perform the Friedman test and the Shaffer post hoc test
+    r_script = """
+    library(scmamp)
+
+    data <- read.csv("temp_data.csv", header = TRUE, row.names = NULL)
+    htest <- friedmanTest(data)
+    saveRDS(htest, file = "temp_htest.rds")
+    raw.pvalues <- friedmanPost(data)
+    saveRDS(raw.pvalues, file = "temp_raw_pvalues.rds")
+    adjusted.pvalues <- adjustShaffer(raw.pvalues)
+    saveRDS(adjusted.pvalues, file = "temp_adjusted_pvalues.rds")
+    """
+    # save the script to a temporary file
+    with open('temp_script.R', 'w') as f:
+        f.write(r_script)
+    # we do not need the DataFrame index
+    df = df.reset_index(drop=True)
+    df.to_csv('temp_data.csv', index=False)
+    subprocess.run(["Rscript", "temp_script.R"])
+
+    # Read the RDS file temp_htest.rds into a Python dictionary
+    htest_R = pyreadr.read_r("temp_htest.rds")
+    Friedman_test = dict()
+    Friedman_test["statistic"] = htest_R[None]['statistic'][0]
+    Friedman_test["parameter"] = htest_R[None]['parameter'][0]
+    Friedman_test["pvalue"] = htest_R[None]['p.value'][0]
+    Friedman_test["method"] = htest_R[None]['method'][0]
+    Friedman_test["data_name"] = htest_R[None]['data.name'][0]
+
+    # Read the RDS file temp_raw_pvalues.rds into a Python dataframe
+    raw_pvalues = pyreadr.read_r("temp_raw_pvalues.rds")
+    raw_pvalues = raw_pvalues[None]
+    raw_pvalues.columns = df.columns
+    raw_pvalues.index = df.columns
+
+    # Read the RDS file temp_adjusted_pvalues.rds into a Python dataframe
+    adjusted_pvalues = pyreadr.read_r("temp_adjusted_pvalues.rds")
+    adjusted_pvalues = adjusted_pvalues[None]
+    adjusted_pvalues.columns = df.columns
+    adjusted_pvalues.index = df.columns
+
+    # Clean up
+    os.remove('temp_data.csv')
+    os.remove('temp_script.R')
+    os.remove('temp_htest.rds')
+    os.remove('temp_raw_pvalues.rds')
+    os.remove('temp_adjusted_pvalues.rds')
+
+    results = {
+        'Friedman_test': Friedman_test,
+        'raw_pvalues': raw_pvalues,
+        'adjusted_pvalues': adjusted_pvalues
+    }
+    return results
+
+
 
 def determine_color(val, row_name, col_name, means):
     if val < 0.05:
