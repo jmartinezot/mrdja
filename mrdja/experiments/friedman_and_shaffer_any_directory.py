@@ -9,7 +9,10 @@ import seaborn as sns
 from matplotlib.colors import ListedColormap
 import mrdja.stats as stats
 
-results_path = "/home/scpmaotj/Github/mrdja/results_experiments_ransaclp/Open3D" 
+results_path = "/home/scpmaotj/Github/mrdja/results_experiments_ransaclp/Open3D"
+image_filename = "shaffer_open3d.png"
+# results_path = "/home/scpmaotj/Github/mrdja/results_experiments_ransaclp/S3DIS" 
+# image_filename = "shaffer_s3dis.png"
 pkl_files = glob.glob(results_path + "/**/*.pkl", recursive=True)
 
 # Initialize an empty dictionary to hold all the data
@@ -59,5 +62,15 @@ means = df.mean()
 results_df_heatmap_data = stats.to_heatmap_custom(results_df, means)
 print("results_df_heatmap_data")
 print(results_df_heatmap_data)
-stats.to_image_custom(results_df, results_df_heatmap_data, "shaffer_open3d.png", df_p_values = adjusted_p_values_df)
+stats.to_image_custom(results_df, results_df_heatmap_data, image_filename, df_p_values = adjusted_p_values_df)
 
+# substract 1 from all the columns and multiply by 100
+percentage_df = (df - 1) * 100
+# get the mean of all columns
+mean_percentage_df = percentage_df.mean(axis=0)
+# get the standard deviation of all columns
+std_percentage_df = percentage_df.std(axis=0)
+
+ranks_df = df.rank(axis=1, method='average', ascending=False)
+mean_ranks = ranks_df.mean()
+std_ranks = ranks_df.std()

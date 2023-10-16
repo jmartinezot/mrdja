@@ -392,17 +392,22 @@ def get_processing_examples(filename_pcd: str, threshold: float, iterations: int
         >>> filename_pcd = "/home/scpmaotj/open3d_data/extract/OfficePointClouds/cloud_bin_10.ply"
         >>> threshold = 0.02
         >>> iterations = 600
+        >>> # iterations = 20
         >>> percentage_chosen_lines = 0.2
         >>> percentage_chosen_planes = 0.05
         >>> indices = [0, 10]
         >>> # indices = [0, 1]
         >>> indices = [50, 51]
+        >>> indices = [51, 52]
+        >>> indices = [53, 54]
+        >>> indices = [50, 54]
+        >>> indices = [0, 1]
         >>> results = experiments.get_processing_examples(filename_pcd, threshold, iterations, percentage_chosen_lines, percentage_chosen_planes, indices = indices)
-        >>> inliers_o3d = results["inliers_o3d"]
-        >>> outliers_o3d = results["outliers_o3d"]
+        >>> # inliers_o3d = results["inliers_o3d"]
+        >>> # outliers_o3d = results["outliers_o3d"]
         >>> # inliers in red
-        >>> inliers_o3d.paint_uniform_color([1, 0, 0])
-        >>> o3d.visualization.draw_geometries([inliers_o3d, outliers_o3d])
+        >>> # inliers_o3d.paint_uniform_color([1, 0, 0])
+        >>> # o3d.visualization.draw_geometries([inliers_o3d, outliers_o3d])
 
     '''
 
@@ -439,7 +444,8 @@ def get_processing_examples(filename_pcd: str, threshold: float, iterations: int
     # compute centroid of pcd
     centroid = np.mean(np_points, axis=0)
     lines = drawing.draw_plane_as_lines_open3d(*plane, external_point=centroid, size=1.5, grid_density=40, line_color=[0, 0, 1])
-    list_inliers = [inliers_line_1, inliers_line_2, inliers_plane]
+    plane_plus_lines = show_list_of_inliers_pcd(inliers_plane, [inliers_line_1, inliers_line_2], threshold=0.001)[-1]
+    list_inliers = [inliers_line_1, inliers_line_2, plane_plus_lines]
     list_colors = [[1, 0, 0], [1, 0, 0], [0, 1, 0]]
     final_pointcloud = show_list_of_inliers_pcd(pcd, list_inliers, list_colors = list_colors, lines = lines)
     '''
@@ -455,7 +461,7 @@ def get_processing_examples(filename_pcd: str, threshold: float, iterations: int
         o3d.visualization.draw_geometries([inliers_line_1, inliers_line_2, outliers])
     '''
 
-
+    '''
     pair_lines_number_inliers = ransaclp.get_lines_and_number_inliers_from_ransac_data_from_file(ransac_data)
     ordered_list_sse_plane = ransaclp.get_ordered_list_sse_plane(pair_lines_number_inliers, percentage_best = 0.2, verbosity_level=verbosity_level,
                                                         inherited_verbose_string=inherited_verbose_string)
@@ -481,12 +487,13 @@ def get_processing_examples(filename_pcd: str, threshold: float, iterations: int
     inliers_o3d.paint_uniform_color([1, 0, 0])
     o3d.visualization.draw_geometries([inliers_o3d, outliers_o3d])
     return results_from_best_plane, ransac_data
+    '''
 
 
 
 
 
-
+    '''
     ransaclp_best_data, ransaclp_full_data = ransaclp.get_ransaclp_data_from_np_points(np_points, ransac_iterations = iterations, 
                                                            threshold = threshold,
                                                            cuda = False,
@@ -512,4 +519,5 @@ def get_processing_examples(filename_pcd: str, threshold: float, iterations: int
     results["inliers_o3d"] = inliers_o3d
     results["outliers_o3d"] = outliers_o3d
     return results
+    '''
     
